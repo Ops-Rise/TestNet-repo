@@ -1,0 +1,15 @@
+@using MudBlazor
+
+<MudDateRangePicker @bind-DateRange="SelectedDateRange" MaxDate="@MaxDate" Label="Selecteer een datumbereik" Variant="Variant.Outlined" />
+
+@code {
+    [Parameter] public DateRange? SelectedDateRange { get; set; }
+    [Parameter] public EventCallback<DateRange?> SelectedDateRangeChanged { get; set; }
+    [Parameter] public DateTime MaxDate { get; set; } = DateTime.Now;
+
+    private void OnDateRangeChanged(DateRange? newDateRange)
+    {
+        SelectedDateRange = newDateRange;
+        SelectedDateRangeChanged.InvokeAsync(newDateRange);
+    }
+}

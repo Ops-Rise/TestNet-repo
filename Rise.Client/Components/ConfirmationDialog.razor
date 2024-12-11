@@ -1,0 +1,52 @@
+@inherits ComponentBase
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        @Title
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body1">@Message</MudText>
+    </DialogContent>
+    <DialogActions>
+        @if (ShowCancelButton)
+        {
+            <MudButton OnClick="@OnCancel" Color="Color.Secondary">@CancelText</MudButton>
+        }
+        <MudButton OnClick="@OnConfirm" Color="Color.Primary">@ConfirmText</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; } = default!;
+
+
+    [Parameter] public string Title { get; set; } = "Confirmation";
+
+    [Parameter] public string Message { get; set; } = "Are you sure you want to proceed?";
+
+    [Parameter] public string ConfirmText { get; set; } = "Ok";
+
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+
+    [Parameter] public bool ShowCancelButton { get; set; } = true;
+
+    [Parameter] public EventCallback OnConfirmAction { get; set; }
+
+    [Parameter] public EventCallback OnCancelAction { get; set; }
+
+    private async Task OnConfirm()
+    {
+        await OnConfirmAction.InvokeAsync();
+        MudDialog.Close(DialogResult.Ok(true));
+    }
+
+    private async Task OnCancel()
+    {
+        if (OnCancelAction.HasDelegate)
+        {
+            await OnCancelAction.InvokeAsync();
+        }
+        MudDialog.Cancel();
+    }
+}

@@ -1,0 +1,77 @@
+@page "/registration"
+@attribute [Authorize]
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
+@using Rise.Shared.Users
+@using Rise.Shared.Addresses
+@inject IUserService UserService
+@inject NavigationManager NavigationManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Registratie</PageTitle>
+
+<MudText id="title" Typo="Typo.h5">Registratie</MudText>
+<EditForm Model="@model" OnValidSubmit="OnValidSubmit" >
+    <DataAnnotationsValidator />
+    <MudGrid>
+        <MudItem xs="12" sm="12" md="12" lg="10" xl="10" class="mt-3">
+            <MudCard>
+                <MudCardContent>
+                    <!-- Grid voor voornaam en achternaam -->
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="6">
+                            <MudTextField id="voornaam" Label="Voornaam" @bind-Value="model.Firstname"
+                                For="@(() => model.Firstname)" />
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="6">
+                            <MudTextField id="achternaam" Label="Achternaam" @bind-Value="model.Lastname"
+                                For="@(() => model.Lastname)" />
+                        </MudItem>
+                    </MudGrid>
+                    <!-- Grid voor straat, nummer en bus -->
+                    <MudGrid>
+                        <MudItem xs="12" sm="6" md="8">
+                            <MudTextField id="straatnaam" Label="Straatnaam" @bind-Value="model.Street"
+                                For="@(() => model.Street)" />
+                        </MudItem>
+                        <MudItem xs="4" sm="3" md="2">
+                            <MudTextField id="nummer" Label="Nummer" @bind-Value="model.HouseNumber"
+                                For="@(() => model.HouseNumber)" />
+                        </MudItem>
+                        <MudItem xs="4" sm="3" md="2">
+                            <MudTextField id="bus" Label="Bus" @bind-Value="model.UnitNumber"
+                                For="@(() => model.UnitNumber)" />
+                        </MudItem>
+                    </MudGrid>
+                    <!-- Grid voor postcode en gemeente -->
+                    <MudGrid>
+                        <MudItem xs="4" sm="4" md="2">
+                            <MudTextField id="postcode" Label="Postcode" @bind-Value="model.PostalCode"
+                                For="@(() => model.PostalCode)" />
+                        </MudItem>
+                        <MudItem xs="8" sm="8" md="10">
+                            <MudTextField id="plaats" Label="Plaats" @bind-Value="model.City"
+                                For="@(() => model.City)" />
+                        </MudItem>
+                    </MudGrid>
+                    <MudTextField id="telefoon" Label="Telefoon" @bind-Value="model.PhoneNumber"
+                        For="@(() => model.PhoneNumber)" />
+                    <MudDatePicker PickerVariant="PickerVariant.Dialog" id="geboortedatum" Label="Geboortedatum"
+                        @bind-Date="model.BirthDay" For="@(() => model.BirthDay)" />
+                    <!--  <MudCheckBox T="bool" Required="true" Label="Ik ben bewoner van de wijk Muide, Meulestede, Afrikalaan"  />-->
+                    <MudCheckBox T="bool" id="voorwaarden" Required="true">
+                    <MudText>Ik ga akkoord met de <a class="font-medium hover:underline" href='/algemene_voorwaarden' target='_blank' rel='noopener noreferrer'>algemene voorwaarden</a></MudText></MudCheckBox>
+                    <MudCheckBox T="bool" id="privacy" Required="true"> 
+                    <MudText>Ik ga akkoord met het <a class="font-medium  hover:underline" href='/privacybeleid' target='_blank' rel='noopener noreferrer'>privacybeleid</a></MudText></MudCheckBox>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton id="submit-button" ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                        Class="ml-auto">
+                        Registreer</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</EditForm>

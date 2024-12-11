@@ -1,0 +1,67 @@
+@page "/RentABoat"
+@attribute [Authorize]
+
+@using Rise.Shared.Users
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@using MudBlazor
+<MudContainer Style="background-color:Color.Background; color:Color.TextPrimary;">
+    <MudPaper Class="p-4 shadow-none" Style="background-color:Color.Surface; color:Color.TextPrimary;">
+        <MudGrid>
+            <MudItem xs="12">
+                <PageTitle>Huur een boot</PageTitle>
+                <MudText class="mt-2 mb-2 text-base sm:text-xl md:text-2xl lg:text-3xl text-center">Huur een boot
+                </MudText>
+            </MudItem>
+            @if (isLoading)
+            {
+                <div class="d-flex justify-content-center">
+                    <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3" />
+                </div>
+            }
+            else
+            @if (!isTrainingComplete || !isRegistrated)
+            {
+                <MudContainer Class="d-flex justify-center">
+                    <MudCard Class="p-4 shadow-none" Style="background-color:Color.Surface; color:Color.TextPrimary;">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-3 text-center">
+                            U hebt nog geen opleiding voltooid. <br /> Om een boeking te kunnen maken moet u eerst aan een
+                            opleidingsmoment deelnemen. <br /> stuur een bericht naar <a
+                                href="mailto:buut.deelbootjes@gmail.com"
+                                style="color: #0f5bcc; text-decoration: none;">buut.deelbootjes@gmail.com</a> Om een
+                            opleidingsmoment aan te vragen.
+                        </MudAlert>
+
+                    </MudCard>
+                </MudContainer>
+            }
+            else
+            {
+                <MudItem xs="12">
+                    <DatePicker />
+                </MudItem>
+            }
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool isTrainingComplete = true; // Default to true for admin
+    private bool isLoading = true;
+    private bool isRegistrated = false;
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var auth0UserId = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+        if (!string.IsNullOrEmpty(auth0UserId))
+        {
+            var user = await UserService.GetUserAsync(auth0UserId);
+            isTrainingComplete = user?.IsTrainingComplete ?? false;
+            isRegistrated = user?.IsRegistrationComplete ?? false;
+        }
+        isLoading = false;
+
+    }
+}

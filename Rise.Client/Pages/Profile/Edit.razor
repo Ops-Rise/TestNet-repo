@@ -1,0 +1,268 @@
+@page "/profile/edit"
+@attribute [Authorize]
+@using Rise.Shared.Users
+@using Rise.Shared.Addresses
+@using Rise.Shared.ProfileImages
+@using Rise.Client.Services
+@using Rise.Client.Pages
+@using MudBlazor
+@using System.Text.RegularExpressions;
+@using System.ComponentModel.DataAnnotations
+@inject IUserService UserService
+@inject IProfileImageService ProfileImageService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ProfileStateService ProfileStateService
+
+<div class="container mx-auto p-6" style="background-color:Color.Background; color:Color.TextPrimary;">
+    <MudPaper class="p-4 shadow-none " Style="background-color:Color.Surface; color:Color.TextPrimary;">
+        <MudGrid>
+            <MudItem xs="12" Class="text-center">
+                <MudText Typo="Typo.h5" Class="mt-2">Profiel bewerken</MudText>
+            </MudItem>
+        </MudGrid>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center mt-4">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+            </div>
+        }
+        else if (userProfile != null)
+        {
+            <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+
+                <MudGrid Class="text-center mt-4 pb-4">
+                    <MudItem xs="12">
+                        <MudAvatar Size="Size.Large" Class="mx-auto">
+                            @if (!string.IsNullOrEmpty(avatarBase64))
+                            {
+                                <MudImage Src="@avatarBase64" Alt="Profile Image" Style="object-fit: cover;" />
+                            }
+                            else
+                            {
+                                <MudImage Src="/Images/default_profile_image.png" Alt="Default Profile Image"
+                                    Style="object-fit: cover;" />
+                            }
+                        </MudAvatar>
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudFileUpload T="IBrowserFile" Class="mt-2" @bind-Files="profileImageFile"
+                            OnFilesChanged="UploadFiles">
+                            <ActivatorContent>
+                                <MudFab Color="Color.Secondary" StartIcon="@Icons.Material.Filled.Image"
+                                    Label="Upload Profielfoto" />
+                            </ActivatorContent>
+                        </MudFileUpload>
+                        @if (!string.IsNullOrWhiteSpace(uploadErrorMessage))
+                        {
+                            <MudText Class="mt-2" Color="Color.Error" Typo="Typo.body2">@uploadErrorMessage</MudText>
+                        }
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid>
+                    <MudItem xs="12">
+                        <MudTextField id="Voornaam" Label="Voornaam" @bind-Value="model.Firstname"
+                            For="@(() => model.Firstname)" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Achternaam" Label="Achternaam" @bind-Value="model.Lastname"
+                            For="@(() => model.Lastname)" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="E-mail" Label="E-mail" Value="@userProfile.Email" Disabled="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudDatePicker id="Geboortedatum" Label="Geboortedatum" @bind-Date="model.BirthDay"
+                            For="@(() => model.BirthDay)" Required="true" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Telefoonnummer" Label="Telefoonnummer" @bind-Value="model.PhoneNumber"
+                            For="@(() => model.PhoneNumber)" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField id="Straat" Label="Straat" @bind-Value="model.Street" Required="true"
+                            For="@(() => model.Street)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Stad" Label="Stad" @bind-Value="model.City" Required="true"
+                            For="@(() => model.City)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Postcode" Label="Postcode" @bind-Value="model.PostalCode" Required="true"
+                            For="@(() => model.PostalCode)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Huisnummer" Label="Huisnummer" @bind-Value="model.HouseNumber" Required="true"
+                            For="@(() => model.HouseNumber)" />
+                    </MudItem>
+                    <MudItem xs="12">
+                        <MudTextField id="Busnummer" Label="Busnummer" @bind-Value="model.UnitNumber"
+                            For="@(() => model.UnitNumber)" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudGrid Class="mt-4 text-center">
+                    <MudItem xs="12" sm="6" class="d-flex justify-content-center mb-2">
+                        <MudButton OnClick="CancelChanges" Variant="Variant.Filled" Color="Color.Error"
+                            Style="color: white; width: 80%; border-radius: 8px; padding: 10px 20px; transition: background-color 0.3s ease;">
+                            Annuleren
+                        </MudButton>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" class="d-flex justify-content-center mb-2">
+                        <MudButton id="Submit" Variant="Variant.Filled" Color="Color.Primary" ButtonType="ButtonType.Submit"
+                            Style="width: 80%; border-radius: 8px; padding: 10px 20px; transition: background-color 0.3s ease;">
+                            Opslaan
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </EditForm>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="text-center mt-4">Er is een fout opgetreden bij het laden van uw profiel.
+            </MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+
+    private RegisterAccountForm model = new RegisterAccountForm();
+    private UserDto.Index userProfile;
+    private IBrowserFile profileImageFile;
+    private bool isLoading = true;
+    private string avatarBase64;
+    private ProfileImageDto.Detail profileImage;
+    private string uploadErrorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+
+        if (userIdClaim != null)
+        {
+            userProfile = await UserService.GetUserAsync(userIdClaim);
+
+            model = new RegisterAccountForm
+                {
+                    Firstname = userProfile.Firstname ?? "",
+                    Lastname = userProfile.Lastname ?? "",
+                    PhoneNumber = userProfile.PhoneNumber ?? "",
+                    BirthDay = userProfile.BirthDay ?? DateTime.MinValue,
+                    Street = userProfile.Address?.Street ?? "",
+                    City = userProfile.Address?.City ?? "",
+                    PostalCode = userProfile.Address?.PostalCode ?? "",
+                    HouseNumber = userProfile.Address?.HouseNumber ?? "",
+                    UnitNumber = userProfile.Address?.UnitNumber ?? ""
+                };
+
+            profileImage = await ProfileImageService.GetProfileImageAsync(userProfile.Id);
+
+            if (profileImage != null && profileImage.ImageBlob.Length > 0)
+            {
+                avatarBase64 = $"data:{profileImage.ContentType};base64,{Convert.ToBase64String(profileImage.ImageBlob)}";
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        const int MaxFileSize = 2 * 1024 * 1024; // 2MB
+        var file = e?.File;
+
+        if (file == null)
+        {
+            uploadErrorMessage = "Er is geen bestand geselecteerd. Kies een bestand om te uploaden.";
+            StateHasChanged();
+            return;
+        }
+
+        if (file.Size > MaxFileSize)
+        {
+            uploadErrorMessage = $"Het bestand is te groot. De maximale grootte voor een profiel foto is 2 MB.";
+            StateHasChanged();
+            return;
+        }
+
+        uploadErrorMessage = null;
+
+        try
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                await file.OpenReadStream().CopyToAsync(memoryStream);
+                var imageBlob = memoryStream.ToArray();
+
+                var profileImageDto = new ProfileImageDto.Edit
+                    {
+                        Id = profileImage?.Id ?? 0,
+                        ContentType = file.ContentType,
+                        ImageBlob = imageBlob
+                    };
+
+                await ProfileImageService.UpdateProfileImageAsync(userProfile.Id, profileImageDto);
+
+                avatarBase64 = $"data:image/{file.ContentType};base64,{Convert.ToBase64String(imageBlob)}";
+
+                ProfileStateService.UpdateAvatar(avatarBase64);
+            }
+        }
+        catch (Exception ex)
+        {
+            uploadErrorMessage = "Er is een fout opgetreden bij het uploaden. Probeer het opnieuw.";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleSubmit()
+    {
+        var userDto = new UserDto.Edit
+            {
+                Id = userProfile.Id,
+                Firstname = model.Firstname,
+                Lastname = model.Lastname,
+                PhoneNumber = model.PhoneNumber,
+                BirthDay = model.BirthDay,
+                Address = new AddressDto
+                {
+                    Street = model.Street,
+                    City = model.City,
+                    PostalCode = model.PostalCode,
+                    HouseNumber = model.HouseNumber,
+                    UnitNumber = model.UnitNumber
+                }
+            };
+
+        var updatedUser = await UserService.UpdateAsync(userProfile.Id, userDto);
+
+        if (updatedUser != null)
+        {
+            Navigation.NavigateTo("/profile");
+        }
+    }
+
+    private async Task<byte[]> ConvertFileToByteArray(IBrowserFile file)
+    {
+        using (var memoryStream = new MemoryStream())
+        {
+            await file.OpenReadStream().CopyToAsync(memoryStream);
+            return memoryStream.ToArray();
+        }
+    }
+
+    private void CancelChanges()
+    {
+        Navigation.NavigateTo("/profile");
+    }
+}

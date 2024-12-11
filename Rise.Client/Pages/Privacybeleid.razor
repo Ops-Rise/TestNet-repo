@@ -1,0 +1,22 @@
+@page "/privacybeleid"
+@inject NavigationManager Navigation
+@inject IConfiguration configuration
+
+<PageTitle>Privacybeleid</PageTitle>
+
+<MudText id="title" Typo="Typo.h5">Privacybeleid</MudText>
+
+<div style="height: calc(100vh - 120px);" class="pt-3"> <!-- Hoogte instellen voor de iframe -->
+    <iframe src="@privacybeleidUrl"  width="100%" height="100%"
+  ></iframe>
+</div>
+
+@code {
+    private string privacybeleidUrl;
+
+    protected override void OnInitialized()
+    {
+        var docsUrl = configuration["ApiSettings:BackendDocsUrl"];
+        privacybeleidUrl = $"{docsUrl}buut_privacybeleid.pdf";
+    }
+}

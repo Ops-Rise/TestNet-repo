@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+   <title>Batterij en boot toegewezen</title>
+   <style>
+       body {
+           font-family: Arial, sans-serif;
+           background-color: #e0f7f7;
+           color: #333333;
+           max-width: 600px;
+           margin: 0 auto;
+           padding: 20px;
+       }
+       h1 {
+           color: #36b1a9;
+           border-bottom: 2px solid #36b1a9;
+           padding-bottom: 10px;
+       }
+       strong {
+           color: #36b1a9;
+       }
+       .logo-container {
+           background-color: #36b1a9;
+           padding: 15px;
+           border-radius: 8px;
+           width: fit-content;
+           margin: 0 auto 20px auto;
+       }
+       .logo {
+           display: block;
+           width: 80px;
+           height: auto;
+       }
+       .container {
+           background-color: #ffffff;
+           padding: 30px;
+           border-radius: 8px;
+           box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+       }
+       a {
+           color: #36b1a9;
+           text-decoration: none;
+       }
+       a:hover {
+           text-decoration: underline;
+       }
+   </style>
+</head>
+<body>
+   <div class="container">
+       <div class="logo-container">
+           <img src="https://static.wixstatic.com/media/617ca3_6d2a97b83785407f85641bb55bf58fc5~mv2.png/v1/fill/w_91,h_66,al_c,q_85,usm_0.66_1.00_0.01,enc_auto/BUUT_logo.png" alt="Buut Logo" class="logo">
+       </div>
+       <h1>Beste {FirstName},</h1>
+       <p>Goed nieuws! Voor uw reservatie op <strong>{RentalDate}</strong> hebben we een batterij en een boot toegewezen.</p>
+       <p>Details van uw reservatie:</p>
+       <ul>
+           <li>Boot: <strong>{BoatName}</strong></li>
+           <li>Batterij: <strong>{BatteryName}</strong></li>
+           <li>Gebruiker ID: <strong>{UserId}</strong></li>
+       </ul>
+       <p>Neem contact op met {FirstnameBatteryUser} {LastnameBatteryUser} om de batterij op te halen. Telefoonnummer: {PhoneNumberBatteryUser}</p>
+       <p>We wensen u een fantastische vaartocht!</p>
+       <p>Heeft u vragen? Aarzel dan niet om contact met ons op te nemen via <a href="mailto:buut.deelbootjes@gmail.com">buut.deelbootjes@gmail.com</a></p>
+       <p>Met vriendelijke groet,<br>Het Buut Team</p>
+   </div>
+</body>
+</html>

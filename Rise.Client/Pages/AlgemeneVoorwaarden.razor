@@ -1,0 +1,21 @@
+@page "/algemene_voorwaarden"
+@inject NavigationManager Navigation
+@inject IConfiguration configuration
+
+<PageTitle>Algemene voorwaarden</PageTitle>
+
+<MudText id="title" Typo="Typo.h5">Algemene voorwaarden</MudText>
+
+<div style="height: calc(100vh - 120px);" class="pt-3"> <!-- Hoogte instellen voor de iframe -->
+    <iframe src="@algemeneVoorwaardenUrl" width="100%" height="100%"></iframe>
+</div>
+
+@code {
+    private string algemeneVoorwaardenUrl;
+
+    protected override void OnInitialized()
+    {
+        var docsUrl = configuration["ApiSettings:BackendDocsUrl"];
+        algemeneVoorwaardenUrl = $"{docsUrl}buut_algemene_voorwaarden.pdf";
+    }
+}

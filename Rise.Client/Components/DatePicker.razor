@@ -1,0 +1,101 @@
+@using System.Globalization
+
+@inject IDialogService Dialog
+<MudCard class="mb-2">
+    <MudGrid Spacing="10" Justify="Justify.Center" Class="pa-4">
+        <MudItem>
+            <style>
+                .date-booked {
+                    opacity: 0.5;
+                    background-color: var(--mud-palette-error) !important;
+                    text-decoration: ;
+                    cursor: not-allowed;
+                }
+
+                .date-out-of-range {
+                    opacity: 0.4;
+                    background-color: var(--mud-palette-error-hover) !important;
+                    text-decoration: ;
+                    cursor: not-allowed;
+                }
+            </style>
+            <MudDatePicker PickerVariant="PickerVariant.Static" Label="Only Calendar" Variant="Variant.Filled"
+                ShowToolbar="false" IsDateDisabledFunc="@IsDateDisabled" Color="Color.Primary" MinDate="@minDate"
+                MaxDate="@maxDate" ReadOnly="@(_showAlert || _showDateAlert)" DateChanged="@OnDateChanged"
+                AdditionalDateClassesFunc="@GetDateClass" />
+        </MudItem>
+        <MudItem Class="d-flex flex-column   align-items-center gap-4">
+
+
+            <MudText class=" text-base sm:text-lg md:text-xl lg:text-2xl text-center">Beschikbare uren op
+                @(Date?.ToString("dddd dd/MM/yyyy", new System.Globalization.CultureInfo("nl-BE")))</MudText>
+            @if (Date.HasValue && Date >= minDate && Date <= maxDate)
+            {
+                <MudItem>
+                    @foreach (var hour in availableHours)
+                    {
+                        bool isHourDisabled = _showAlert || _showDateAlert || IsHourBlocked(Date.Value, hour, _availableBoats);
+                        bool isSelected = hour == SelectedHour;
+                        <MudToggleIconButton Color="Color.Primary" Variant="Variant.Outlined"
+                            Class="px-4 py-2 mx-2 md:px-6 md:py-3 md:mx-5 text-sm md:text-base" @onclick="()=>SelectHour(hour)"
+                            Disabled="@isHourDisabled" @bind-Toggled="@isSelected" ToggledVariant="@Variant.Filled">
+                            <span>@hour</span>
+                        </MudToggleIconButton>
+                    }
+                </MudItem>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2">Gelieve een geldige datum te selecteren tussen @minDate.ToString("dd/MM/yyyy",
+                new System.Globalization.CultureInfo("nl-BE")) en @maxDate.ToString("dd/MM/yyyy", new
+                System.Globalization.CultureInfo("nl-BE")) </MudText>
+                <MudText Typo="Typo.body2"></MudText>
+            }
+
+
+            @if (!string.IsNullOrEmpty(SelectedHour))
+            {
+                <p>U selecteerde: @SelectedHour op @Date?.ToString("dddd dd/MM/yyyy", new
+                System.Globalization.CultureInfo("nl-BE"))</p>
+                <p>Prijs: €@_priceDto!.Amount</p>
+                <div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" @onclick="OpenDialogAsync"
+                        Disabled="@(_showAlert || _showDateAlert)">bevestig</MudButton>
+                </div>
+            }
+
+        </MudItem>
+    </MudGrid>
+</MudCard>
+
+@if (_showAlert)
+{
+    <MudAlert Severity="Severity.Success" Variant="Variant.Outlined" ContentAlignment="MudBlazor.HorizontalAlignment.Center"
+        Class="bg-white">
+        <div class="text-center my-3 pb-3">
+            <strong>Bevestigd!</strong> Uw reservering is bevestigd voor op @Date?.ToString("dddd dd/MM/yyyy", new
+        System.Globalization.CultureInfo("nl-BE")) om @SelectedHour.
+            <div class="text-center mt-2">
+                U wordt doorverwezen naar de betaalpagina.
+            </div>
+        </div>
+        <div class="text-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Success" @onclick="CloseAlert" aria-label="Close">Sluiten
+            </MudButton>
+        </div>
+    </MudAlert>
+}
+
+@if (_showDateAlert)
+{
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" ContentAlignment="MudBlazor.HorizontalAlignment.Center"
+        Class="bg-white">
+        <div class="text-center my-3 pb-3">
+            <strong>Reservatie niet mogelijk</strong> @AlertMessage
+        </div>
+        <div class="text-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Warning" @onclick="CloseDateAlert" aria-label="Close">Sluiten
+            </MudButton>
+        </div>
+    </MudAlert>
+}

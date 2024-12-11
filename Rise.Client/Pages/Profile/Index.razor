@@ -1,0 +1,125 @@
+@page "/profile"
+@attribute [Authorize]
+@using Rise.Shared.Users
+@using Rise.Shared.Addresses
+@using Rise.Shared.ProfileImages
+@using Rise.Client.Services
+@using MudBlazor
+@inject IUserService UserService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IProfileImageService ProfileImageService
+@inject ProfileStateService ProfileStateService
+
+<div class="container mx-auto p-6" style="background-color:Color.Background; color:Color.TextPrimary;">
+    <MudPaper class="p-4 shadow-none " Style="background-color:Color.Surface; color:Color.TextPrimary;">
+        <MudGrid>
+            <MudItem xs="12" class="text-center">
+                <MudText Typo="Typo.h5" Class="mb-2">Profiel</MudText>
+            </MudItem>
+        </MudGrid>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" Class="mt-3" />
+            </div>
+        }
+        else if (userProfile != null)
+        {
+            <MudCard Class="shadow-none items-center text-left">
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="12" sm="8">
+                            <MudText Typo="Typo.body1" Class="mb-2"><strong>Voornaam:</strong> @userProfile.Firstname</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2"><strong>Achternaam:</strong> @userProfile.Lastname</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2"><strong>Geboortedatum:</strong> @userProfile.BirthDay?.ToString("dd/MM/yyyy",  new System.Globalization.CultureInfo("nl-BE"))</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2"><strong>Adres:</strong> @Address?.FullAddress</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Email" />
+                                <strong>E-mail:</strong> @userProfile.Email
+                            </MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Phone" />
+                                <strong>Telefoonnummer:</strong> @userProfile.PhoneNumber
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="4" class="d-flex justify-content-center">
+                            @if (!string.IsNullOrEmpty(ProfileStateService.AvatarBase64))
+                            {
+                                <MudImage Src="@ProfileStateService.AvatarBase64" Alt="Profile Image" Style="object-fit: cover; max-width: 200px; max-height: 200px;" />
+                            }
+                            else
+                            {
+                                <MudImage Src="/Images/default_profile_image.png" Alt="Default Profile Image" Style="object-fit: cover; max-width: 200px; max-height: 200px;" />
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+
+            <MudItem xs="12" class="text-center mt-4">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@NavigateToEdit">Bewerk Profiel</MudButton>
+            </MudItem>
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="text-center mt-4">Er is een fout opgetreden bij het laden van uw profiel.</MudText>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    
+    private UserDto.Index? userProfile;
+    private AddressDto Address;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+
+        if (userIdClaim != null)
+        {
+            userProfile = await UserService.GetUserAsync(userIdClaim);
+
+                        if (userProfile != null)
+            {
+                try
+                {
+                    var profileImage = await ProfileImageService.GetProfileImageAsync(userProfile.Id);
+                    if (profileImage?.ImageBlob != null && profileImage.ImageBlob.Length > 0)
+                    {
+                        var avatarBase64 = $"data:{profileImage.ContentType};base64,{Convert.ToBase64String(profileImage.ImageBlob)}";
+                        
+                        ProfileStateService.UpdateAvatar(avatarBase64);
+                    }
+                    else
+                    {
+                        ProfileStateService.UpdateAvatar(string.Empty);
+                    }
+                }
+                catch
+                {
+                    ProfileStateService.UpdateAvatar(string.Empty);
+                }
+            }
+
+            ProfileStateService.OnChange += StateHasChanged;
+
+            if (userProfile.Address != null)
+            {
+                Address = userProfile.Address;
+            }
+        }
+        
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private void NavigateToEdit()
+    {
+        Navigation.NavigateTo("/profile/edit");
+    }
+}

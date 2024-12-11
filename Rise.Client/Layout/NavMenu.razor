@@ -1,0 +1,161 @@
+﻿@* NavMenu.razor *@
+@using MudBlazor
+@using Rise.Shared.Users
+@using Rise.Shared.ProfileImages
+@using Rise.Client.Services
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@inject NavigationManager Navigation
+@inject IUserService UserService
+@inject IProfileImageService ProfileImageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ProfileStateService ProfileStateService
+
+
+<MudAppBar Color="Color.Primary" Fixed="true" Dense="false" Style="height: 70px;">
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="px-4">
+        <MudGrid Container="true" AlignItems="AlignItems.Center" Style="height: 100%; padding-top: 10px; padding-bottom: 4px;">
+            <!-- Logo -->
+            <MudItem xs="3" md="2" Class="px-0">
+                <NavLink Href="/" Match="NavLinkMatch.All" Class="d-flex align-center">
+                    <MudImage Src="/Images/BUUT_logo_91_66.png" Width="49" Height="36" Alt="Buut" />
+                </NavLink>
+            </MudItem>
+
+            <!-- Mobile Menu Button -->
+            <MudItem xs="9" Class="d-flex justify-end d-md-none">
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.End" OnClick="@(() => isDrawerOpen = !isDrawerOpen)" />
+            </MudItem>
+
+            <!-- Desktop Navigation -->
+            <MudItem xs="12" md="8" Class="d-none d-md-flex justify-center">
+                <MudButton Href="becomeMember" Color="Color.Inherit" Variant="Variant.Text" Class="mx-3">Hoe lid worden</MudButton>
+                <AuthorizeView>
+                    <Authorized>
+                        <MudButton Href="rentABoat" Color="Color.Inherit" Variant="Variant.Text" Class="mx-3">Huur een boot</MudButton>
+                        <MudButton Href="bookings" Color="Color.Inherit" Variant="Variant.Text" Class="mx-3">Mijn boekingen</MudButton>
+                    </Authorized>
+                </AuthorizeView>
+                <AuthorizeView Roles="Administrator">
+                    <Authorized>
+                        <MudMenu Label="Admin" Color="Color.Inherit" Variant="Variant.Text" Class="mx-3">
+                            <MudMenuItem Href="settings">Beheer</MudMenuItem>
+							<MudMenuItem Href="mail">Mail</MudMenuItem>
+                            <MudMenuItem Href="batteries">Batterijen</MudMenuItem>
+                            <MudMenuItem Href="admin/bookings">Boekingen</MudMenuItem>
+                            <MudMenuItem Href="boats">Boten</MudMenuItem>
+                            <MudMenuItem Href="users">Gebruikers</MudMenuItem>
+                        </MudMenu>
+                    </Authorized>
+                </AuthorizeView>
+            </MudItem>
+
+            <!-- Account -->
+            <MudItem xs="3" md="2" Class="d-none d-md-flex justify-end px-0">
+                <AuthorizeView>
+                    <Authorized>
+                        <MudMenu>
+                            <ActivatorContent>
+                                <MudAvatar Size="Size.Medium">
+                                    
+@if(!string.IsNullOrEmpty(ProfileStateService.AvatarBase64))                                  
+{<MudImage Src="@ProfileStateService.AvatarBase64"Alt="Profile Image"Style="object-fit:cover;"/>
+}                             
+else
+{<MudImage Src="/Images/default_profile_image.png"Alt="Default Profile Image" Style="object-fit:cover;"/>
+}
+                                </MudAvatar>
+                            </ActivatorContent>
+                            <ChildContent>
+                                <MudMenuItem Href="profile">Profiel raadplegen</MudMenuItem>
+                                <MudMenuItem Disabled="true">Email: @context.User.Identity?.Name</MudMenuItem>
+                                <MudMenuItem OnClick="BeginLogOut">Log out</MudMenuItem>
+                            </ChildContent>
+                        </MudMenu>
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudButton Href="authentication/login" Color="Color.Inherit" Variant="Variant.Text">Log in</MudButton>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </MudItem>
+        </MudGrid>
+    </MudContainer>
+</MudAppBar>
+
+<MudDrawer @bind-Open="@isDrawerOpen" Anchor="Anchor.Right" Elevation="1" Variant="@DrawerVariant.Temporary" Style="height: 100vh;">
+    <MudNavMenu>
+        <MudNavLink Href="becomeMember" Icon="@Icons.Material.Filled.Person">Hoe lid worden</MudNavLink>
+        <AuthorizeView>
+            <Authorized>
+                <MudNavLink Href="rentABoat" Icon="@Icons.Material.Filled.DirectionsBoat">Huur een boot</MudNavLink>
+                <MudNavLink Href="bookings" Icon="@Icons.Material.Filled.BookOnline">Mijn boekingen</MudNavLink>
+                <MudNavLink Href="profile" Icon="@Icons.Material.Filled.AccountCircle">Profiel raadplegen</MudNavLink>
+                <MudNavLink OnClick="BeginLogOut" Icon="@Icons.Material.Filled.Logout">Log out</MudNavLink>
+            </Authorized>
+              <NotAuthorized>
+                <MudNavLink Href="authentication/login" Icon="@Icons.Material.Filled.Login">Log in</MudNavLink>
+            </NotAuthorized>
+        </AuthorizeView>
+        
+        <AuthorizeView Roles="Administrator">
+            <Authorized>
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.subtitle2" Class="px-4 my-2">Admin Menu</MudText>
+                <MudNavLink Href="settings" Icon="@Icons.Material.Filled.Settings">Beheer</MudNavLink>
+                <MudNavLink Href="batteries" Icon="@Icons.Material.Filled.BatteryFull">Batterijen</MudNavLink>
+                <MudNavLink Href="bookings" Icon="@Icons.Material.Filled.Book">Boekingen</MudNavLink>
+                <MudNavLink Href="users" Icon="@Icons.Material.Filled.People">Gebruikers</MudNavLink>
+            </Authorized>
+        </AuthorizeView>
+    </MudNavMenu>
+</MudDrawer>
+
+@code {
+    private UserDto.Index userProfile;
+    private bool isDrawerOpen = false;
+    private bool collapseNavMenu = true;
+
+    private void ToggleNavMenu()
+    {
+        collapseNavMenu = !collapseNavMenu;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var userIdClaim = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+
+        if (!string.IsNullOrWhiteSpace(userIdClaim))
+        {
+            userProfile = await UserService.GetUserAsync(userIdClaim);
+
+            if (userProfile != null)
+            {
+                try
+                {
+                    var profileImage = await ProfileImageService.GetProfileImageAsync(userProfile.Id);
+                    if (profileImage?.ImageBlob != null && profileImage.ImageBlob.Length > 0)
+                    {
+                        var avatarBase64 = $"data:{profileImage.ContentType};base64,{Convert.ToBase64String(profileImage.ImageBlob)}";
+                        
+                        ProfileStateService.UpdateAvatar(avatarBase64);
+                    }
+                    else
+                    {
+                        ProfileStateService.UpdateAvatar(string.Empty);
+                    }
+                }
+                catch
+                {
+                    ProfileStateService.UpdateAvatar(string.Empty);
+                }
+            }
+        }
+
+        ProfileStateService.OnChange += StateHasChanged;
+    }
+
+    public void BeginLogOut()
+    {
+        Navigation.NavigateToLogout("authentication/logout");
+    }
+}

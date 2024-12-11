@@ -1,0 +1,87 @@
+﻿@using Rise.Client.Auth
+@inherits LayoutComponentBase
+@using Rise.Client.ExceptionHandling
+
+
+@* Required *@
+<MudThemeProvider Theme="BuutTheme" />
+<MudPopoverProvider />
+
+@* Needed for dialogs *@
+<MudDialogProvider CloseButton="true" BackdropClick="false" Position="DialogPosition.Center" CloseOnEscapeKey="true" />
+
+@* Needed for snackbars *@
+<MudSnackbarProvider />
+
+<div class="page">
+    <MudMainContent>
+        <NavMenu />
+        <article class="content">
+            <CustomErrorBoundary @ref="_errorBoundary">
+                <ChildContent>
+                    @Body
+                </ChildContent>
+                <ErrorContent Context="Exception">
+                    <MudAlert Severity="Severity.Error" Style="background-color: var(--mud-palette-surface);">
+                        <MudText>Er gebeurde een onverwachte fout.</MudText>
+                        <MudText>Neem contact met de beheerder als fout zich blijft voordoen.</MudText>
+                        <MudText class="mt-5">@Exception.GetType()</MudText>
+                        <MudText>@Exception.Message</MudText>
+                        <MudButton Varriant="Varriant.Filled" Color="Color.Primary" OnClick="() => _errorBoundary.Recover()">Herstel</MudButton>
+                    </MudAlert>
+                </ErrorContent>
+            </CustomErrorBoundary>
+        </article>
+    </MudMainContent>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    private CustomErrorBoundary _errorBoundary;
+    protected override void OnInitialized()
+    {
+        _errorBoundary = new CustomErrorBoundary();
+
+    }
+    protected MudTheme BuutTheme = new MudTheme()
+        {
+            PaletteLight = new PaletteLight()
+            {
+                // Primaire kleuren
+                Primary = new MudBlazor.Utilities.MudColor("#36b1a9"), // Een iets diepere aquagroene tint
+                Secondary = new MudBlazor.Utilities.MudColor("#0f5bcc"), // Een iets donkerder blauw
+
+                // Achtergrondkleuren
+                Background = new MudBlazor.Utilities.MudColor("#e0f7f7"), // Licht aquagroen voor een zachte achtergrondkleur
+                Surface = new MudBlazor.Utilities.MudColor("#ffffff"), // Wit voor oppervlakken zoals kaarten en secties
+                DrawerBackground = new MudBlazor.Utilities.MudColor("#f5f5f5"), // Zacht grijs voor zijmenu’s, rustiger voor het oog
+
+                // Appbar en Drawer
+                AppbarBackground = new MudBlazor.Utilities.MudColor("#36b1a9"), // Primaire kleur als headerkleur
+                DrawerText = new MudBlazor.Utilities.MudColor("#333333"), // Donkergrijs voor tekst in de drawer voor betere
+                                                                          // leesbaarheid
+                AppbarText = new MudBlazor.Utilities.MudColor("#ffffff"), // Wit voor appbar tekst om op te vallen
+
+                // Tekstkleuren
+                TextPrimary = new MudBlazor.Utilities.MudColor("#333333"), // Donkergrijs, een beetje zachter dan zwart
+                TextSecondary = new MudBlazor.Utilities.MudColor("#36b1a9"), // Primaire kleur voor secundaire tekstaccenten
+
+                // Actie en tabel
+                ActionDefault = new MudBlazor.Utilities.MudColor("#0f5bcc"), // Donkerblauw voor actieknoppen, consistente secundaire
+                                                                             // kleur
+                ActionDisabled = new MudBlazor.Utilities.MudColor("#bfbfbf"), // Lichtgrijs voor uitgeschakelde acties
+                ActionDisabledBackground = new MudBlazor.Utilities.MudColor("#f0f0f0"), // Zachtgrijs als achtergrond voor
+                                                                                        // uitgeschakelde knoppen
+                Divider = new MudBlazor.Utilities.MudColor("#d1d1d1"), // Lichtgrijze divider voor subtiele scheiding
+                TableLines = new MudBlazor.Utilities.MudColor("#dfe6e6"), // Zachtgrijs als lijntjes in de tabel
+
+                // Statuskleuren
+                Success = new MudBlazor.Utilities.MudColor("#4caf50"), // Groene tint voor succesvolle status
+                Error = new MudBlazor.Utilities.MudColor("#e53935"), // Rood voor fouten
+                Info = new MudBlazor.Utilities.MudColor("#0f5bcc"), // Donkerblauw voor informatieve berichten
+                Warning = new MudBlazor.Utilities.MudColor("#ffb74d") // Oranjetint voor waarschuwingen
+            }
+        };
+}

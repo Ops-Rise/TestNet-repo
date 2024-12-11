@@ -1,0 +1,49 @@
+﻿@using Microsoft.AspNetCore.Components
+@using MudBlazor
+
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="BuutTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    @* Main Content Area *@
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="px-4">
+            @ChildContent 
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    protected MudTheme BuutTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = new MudBlazor.Utilities.MudColor("#42c5be"),
+            Secondary = new MudBlazor.Utilities.MudColor("#116dff"),
+            Background = new MudBlazor.Utilities.MudColor("#020202"),
+            Surface = new MudBlazor.Utilities.MudColor("#000000"),
+            AppbarBackground = new MudBlazor.Utilities.MudColor("#42c5be"),
+            DrawerBackground = new MudBlazor.Utilities.MudColor("#020202"),
+            DrawerText = new MudBlazor.Utilities.MudColor("#ffffff"),
+            AppbarText = new MudBlazor.Utilities.MudColor("#ffffff"),
+            TextPrimary = new MudBlazor.Utilities.MudColor("#ffffff"),
+            TextSecondary = new MudBlazor.Utilities.MudColor("#42c5be"),
+            ActionDefault = new MudBlazor.Utilities.MudColor("#116dff"),
+            ActionDisabled = new MudBlazor.Utilities.MudColor("#443f3f"),
+            ActionDisabledBackground = new MudBlazor.Utilities.MudColor("#020202"),
+            Divider = new MudBlazor.Utilities.MudColor("#020202"),
+            TableLines = new MudBlazor.Utilities.MudColor("#116dff"),
+            Success = new MudBlazor.Utilities.MudColor("#42c5be"),
+            Error = new MudBlazor.Utilities.MudColor("#ff0000"),
+            Info = new MudBlazor.Utilities.MudColor("#116dff"),
+            Warning = new MudBlazor.Utilities.MudColor("#443f3f")
+        }
+    };
+}

@@ -1,0 +1,453 @@
+@page "/bookings"
+@attribute [Authorize]
+@using Rise.Client.Components.Bookings
+@using Rise.Domain.Bookings
+@using Rise.Shared.Users
+@using WebUtil = Microsoft.AspNetCore.WebUtilities.QueryHelpers;
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IBookingService BookingService
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+
+<link href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" rel="stylesheet">
+
+<div class="container mx-auto p-6" style="background-color:Color.Background; color:Color.TextPrimary;">
+
+    <MudPaper class="p-4 shadow-none " Style="background-color:Color.Surface; color:Color.TextPrimary;">
+        <MudItem class="text-center">
+            <MudText Typo="Typo.h5">Boekingen</MudText>
+        </MudItem>
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3"/>
+            </div>
+        }
+        else
+        {
+            if (!isTrainingComplete)
+            {
+                <MudContainer Class="d-flex justify-center">
+                    <MudCard Class="p-4 shadow-none" Style="background-color:Color.Surface; color:Color.TextPrimary;">
+                        <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-3 text-center">
+                            U hebt nog geen opleiding voltooid. <br/> Om een boeking te kunnen maken moet u eerst aan een
+                            opleidingsmoment deelnemen. <br/> stuur een bericht naar
+                            <a
+                                href="mailto:buut.deelbootjes@gmail.com?subject=Aanvraag opleidingsmoment"
+                                style="color: #0f5bcc; text-decoration: none;">
+                                buut.deelbootjes@gmail.com
+                            </a> Om een
+                            opleidingsmoment aan te vragen.
+                        </MudAlert>
+                    </MudCard>
+                </MudContainer>
+            }
+            else
+            {
+                // show/make bookings when training is complete
+                if (bookings == null)
+                {
+                    <MudGrid Justify="Justify.Center" AlignItems="AlignItems.Center" Class="text-center mt-6">
+                        <MudItem xs="12" md="8" lg="6" Class="flex justify-center flex-col items-center">
+                            @if (isTrainingComplete)
+                            {
+                                <MudText Typo="Typo.body1" Class="mb-2">Geen boekingen gevonden.</MudText>
+                                <MudButton Color="Color.Primary" OnClick="NavigateToRentABoat" Class="mt-2"
+                                           Style="padding: 10px 20px; font-size: 16px; font-weight: 600;">
+                                    Maak een nieuwe boeking aan
+                                </MudButton>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                }
+                else
+                {
+                    <MudGrid Justify="Justify.FlexEnd" Style="display: flex; gap: 1rem; margin-bottom: 3px; height: 100px">
+                        <MudItem xs="6" sm="6" md="4" lg="3" Style="max-width: 300px; width: 100%;">
+                            @*Still bugged to be implemented <SimpleDatePicker SelectedDateRange="@SelectedDateRange" SelectedDateRangeChanged="OnDateRangeChanged" MaxDate="@DateTime.Now.AddDays(30)" /> *@
+
+                            <MudTextField @bind-Value="SearchString" Variant="Variant.Outlined" Clearable="true"
+                                          Placeholder="Search" Adornment="Adornment.Start" Margin="Margin.Dense"
+                                          Immediate="true" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                                          Class="search-item"/>
+                        </MudItem>
+                    </MudGrid>
+                    <MudDataGrid T="BookingDto.Index"
+                                 QuickFilter="@QuickFilter"
+                                 Items="bookings"
+                                 SortMode="SortMode.Multiple"
+                                 Filterable="true"
+                                 Hover="true"
+                                 Dense="true"
+                                 FilterCaseSensitivity="@DataGridFilterCaseSensitivity.CaseInsensitive"
+                                 @bind-FilterDefinitions="filterDefinitions"
+                                 @bind-SortDefinitions="sortDefinitions"
+                                 @ref="dataGrid"
+                                 RowClick="@(args => ShowBookingDetailsModal(args.Item))"
+                                 FixedHeader="true"
+                                 Height="@_tableHeight">
+
+                        <Columns>
+                            <TemplateColumn Title="Datum">
+                                <CellTemplate>
+                                    <span style="@(context.Item == firstFutureBooking ? "font-weight: bold;" : "")">
+                                        @context.Item.RentalDateTime.ToString("dddd dd\\/MM\\/yyyy")
+                                    </span>
+                                </CellTemplate>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Uur">
+                                <CellTemplate>
+                                    <span style="@(context.Item == firstFutureBooking ? "font-weight: bold;" : "")">
+                                        @context.Item.RentalDateTime.ToString("HH:mm")
+                                    </span>
+                                </CellTemplate>
+                            </TemplateColumn>
+
+
+                            <TemplateColumn Title="Boot">
+                                <CellTemplate>
+                                    <span style="@(context.Item == firstFutureBooking ? "font-weight: bold;" : "")">
+                                        @(context.Item.Boat?.Name ?? "")
+                                    </span>
+                                </CellTemplate>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Weer">
+                                <CellTemplate>
+                                    @if (context.Item.Weather != null)
+                                    {
+                                        <div class="d-flex align-items-center">
+                                            <MudIcon Icon="@GetWeatherIcon(context.Item.Weather.WeatherCode)" Color="Color.Default"/>
+                                            <span class="ml-3">@context.Item.Weather.Temperature.ToString("F1")°C</span> <!-- Verhoogde margin -->
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span></span>
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Status">
+                                <CellTemplate>
+                                    <span style="@(context.Item == firstFutureBooking ? "font-weight: bold;" : "")">
+                                        @(((BookingStatus)context.Item.Status).TranslateStatusToNL())
+                                    </span>
+                                </CellTemplate>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Betaalstatus">
+                                <CellTemplate>
+                                    <span style="@(context.Item == firstFutureBooking ? "font-weight: bold;" : "")">
+                                        @TranslatePaymentStatus(context.Item.Payment?.Status)
+                                    </span>
+
+                                </CellTemplate>
+                            </TemplateColumn>
+
+                            <TemplateColumn Title="Actie" Filterable="false" Sortable="false" CellClass="d-flex justify-end">
+                                <CellTemplate>
+                                    @if (context.Item.RentalDateTime >= DateTime.Now && context.Item.Battery == null && (BookingStatus)context.Item.Status == BookingStatus.Active)
+                                    {
+                                        <MudTooltip Text="Annuleren">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                           Color="Color.Primary"
+                                                           OnClick="() => ConfirmCancelBooking(context.Item.Id)"/>
+                                        </MudTooltip>
+                                    }
+
+
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                                                   Style="visibility: hidden;"/>
+
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+
+                        <PagerContent>
+                            <MudDataGridPager T="BookingDto.Index"/>
+                        </PagerContent>
+                    </MudDataGrid>
+                }
+            }
+        }
+    </MudPaper>
+</div>
+
+@code {
+    private int userId;
+    private int? bookingId; // BookingId when redirected from booking
+    private MudTable<BookingDto.Index> _table;
+    private IEnumerable<BookingDto.Index> bookings;
+    private int currentPage = 0;
+    private BookingDto.Index? firstFutureBooking;
+    private bool isTrainingComplete = true; // default to true for admin
+    private int[] pageSizeOptions = new int[] { 25, 50, 100 };
+    private bool isLoading = true;
+
+    //Filters To be implemented
+    private string SearchString { get; set; }
+    private DateRange? SelectedDateRange { get; set; }
+    private MudDataGrid<BookingDto.Index> dataGrid { get; set; }
+    private List<IFilterDefinition<BookingDto.Index>> filterDefinitions { get; set; } = new();
+    private Dictionary<string, SortDefinition<BookingDto.Index>> sortDefinitions { get; set; } = new();
+
+    [Inject] private IJSRuntime JS { get; set; }
+
+    private string _tableHeight = "400px";
+
+    protected override async Task OnInitializedAsync()
+    {
+        //extra rechten voor admin
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+
+        var auth0UserId = authState.User.FindFirst(c => c.Type == "sub")?.Value;
+        userId = await UserService.GetUserIdAsync(auth0UserId!);
+        if (!string.IsNullOrEmpty(auth0UserId))
+        {
+            var user = await UserService.GetUserAsync(auth0UserId);
+            isTrainingComplete = user?.IsTrainingComplete ?? false;
+        }
+
+
+        await LoadBookings();
+        isLoading = false;
+        StateHasChanged();
+
+        var viewportHeight = await JS.InvokeAsync<int>("eval", "window.innerHeight");
+        var adjustedHeight = viewportHeight - 300;
+        _tableHeight = $"{adjustedHeight}px";
+    }
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = WebUtil.ParseQuery(uri.Query);
+
+        if (query.ContainsKey("bookingId"))
+        {
+            int.TryParse(query["bookingId"], out int id);
+            bookingId = id;
+        }
+
+        if (bookingId.HasValue)
+        {
+            var booking = bookings.FirstOrDefault(b => b.Id == bookingId.Value);
+            ShowBookingDetailsModal(booking);
+        }
+    }
+
+
+    private async Task LoadBookings()
+    {
+        //aanpassing nodig voor toekomstige rollen peter/meter?
+        bookings =  await BookingService.GetBookingsByUserIdAsync(userId);
+
+
+        if (bookings != null)
+        {
+            // Zoek de index en object van de eerste toekomstige boeking
+            var firstFutureBookingIndex = bookings.ToList().FindIndex(b => b.RentalDateTime >= DateTime.Now && (BookingStatus)b.Status == BookingStatus.Active);
+            firstFutureBooking = firstFutureBookingIndex != -1 ? bookings.ElementAt(firstFutureBookingIndex) : null;
+            if (firstFutureBookingIndex != -1)
+            {
+                currentPage = firstFutureBookingIndex / pageSizeOptions[0];
+            }
+        }
+    }
+
+    private async Task ShowBookingDetailsModal(BookingDto.Index Item)
+    {
+        var parameters = new DialogParameters { ["BookingId"] = Item.Id, ["IsNotEditable"] = true, ["isAdmin"] = false };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = DialogService.Show<BookingDetailDialog>("Boeking detail", parameters, options);
+        var result = await dialog.Result;
+    }
+
+    private async Task EditBooking(int bookingId)
+    {
+        var parameters = new DialogParameters { ["BookingId"] = bookingId, ["IsNotEditable"] = false, ["isAdmin"] = false };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium };
+        var dialog = DialogService.Show<BookingDetailDialog>("Boeking bewerken", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var data = (dynamic)result.Data;
+            var Id = data.BookingId;
+            var updatedBoat = data.UpdatedInfo;
+            // Currently just update boat to update UI changes without backend calls
+            var bookingToUpdate = bookings.FirstOrDefault(b => b.Id == Id);
+
+            if (bookingToUpdate != null)
+            {
+                bookingToUpdate.Boat = updatedBoat;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ConfirmCancelBooking(int bookingId)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", "Boeking annuleren" },
+            { "Message", "Weet u zeker dat u deze boeking wilt annuleren?" },
+            { "ConfirmText", "Bevestigen" },
+            { "CancelText", "Annuleren" },
+            { "ShowCancelButton", true }
+        };
+
+        var dialog = DialogService.Show<ConfirmationDialog>("Bevestiging", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await CancelBooking(bookingId);
+        }
+    }
+
+    private async Task CancelBooking(int bookingId)
+    {
+        try
+        {
+            var result = await BookingService.CancelBookingAsync(bookingId);
+            if (result)
+            {
+                await LoadBookings();
+                Snackbar.Add("Boeking succesvol geannuleerd.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Er is iets fout gegaan bij het annuleren van de boeking.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Er is iets fout gegaan bij het annuleren van de boeking.", Severity.Error);
+        }
+    }
+
+    public static string TranslateStatusToNL(BookingStatus status)
+    {
+        switch (status)
+        {
+            case BookingStatus.Canceled:
+                return "Geannuleerd";
+            case BookingStatus.Completed:
+                return "Voltooid";
+            case BookingStatus.Active:
+                return "Actief";
+            default:
+                return "Onbekend";
+        }
+    }
+
+    private string TranslatePaymentStatus(string? status)
+    {
+        if (string.IsNullOrEmpty(status))
+            return "Geen betaalstatus";
+
+        return status.ToLower() switch
+        {
+            "pending" => "In afwachting",
+            "paid" => "Betaald",
+            "failed" => "Mislukt",
+            "refunded" => "Terugbetaald",
+            "canceled" => "Geannuleerd",
+            _ => "Onbekend"
+        };
+    }
+
+
+    private void NavigateToBookingDetails(int bookingId)
+    {
+        Navigation.NavigateTo($"/bookings/{bookingId}");
+    }
+
+    private void NavigateToRentABoat()
+    {
+        Navigation.NavigateTo("/rentABoat");
+    }
+
+    private async Task OnDateRangeChanged(DateRange? newDateRange)
+    {
+        SelectedDateRange = newDateRange;
+
+        if (dataGrid != null)
+        {
+            await dataGrid.ReloadServerData();
+        }
+
+        StateHasChanged();
+    }
+
+
+    // Basis Search Filter to extand
+    private Func<BookingDto.Index, bool> QuickFilter => i =>
+    {
+        SearchString = SearchString?.Replace(".", ",");
+        string formattedDate = i.RentalDateTime.ToString("dddd dd-MM-yyyy", new CultureInfo("nl-NL"));
+
+        if (string.IsNullOrWhiteSpace(SearchString) && (SelectedDateRange == null || SelectedDateRange.Start == null || SelectedDateRange.End == null))
+        {
+            return true;
+        }
+
+        if (SelectedDateRange != null && SelectedDateRange.Start.HasValue && SelectedDateRange.End.HasValue)
+        {
+            if (i.RentalDateTime.Date < SelectedDateRange.Start.Value.Date || i.RentalDateTime.Date > SelectedDateRange.End.Value.Date)
+            {
+                return false;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(SearchString))
+        {
+            if (formattedDate.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+
+            if (i.User?.Firstname?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+                return true;
+
+            if (i.User?.Lastname?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+                return true;
+
+            if (i.Boat?.Name?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+                return true;
+
+            if (((BookingStatus)i.Status).TranslateStatusToNL().Contains(SearchString, StringComparison.InvariantCultureIgnoreCase))
+                return true;
+        }
+
+        return false;
+    };
+
+    private string GetWeatherIcon(int weatherCode)
+    {
+        return weatherCode switch
+        {
+            0 => "wi wi-day-sunny",
+            1 or 2 or 3 => "wi wi-day-cloudy",
+            45 or 48 => "wi wi-day-fog",
+            51 or 53 or 55 => "wi wi-day-rain",
+            56 or 57 => "wi wi-day-sleet",
+            61 or 63 or 65 => "wi wi-day-rain",
+            66 or 67 => "wi wi-day-snow",
+            71 or 73 or 75 => "wi wi-day-snow",
+            77 => "wi wi-day-snow",
+            80 or 81 or 82 => "wi wi-day-showers",
+            85 or 86 => "wi wi-day-snow-thunderstorm",
+            95 => "wi wi-day-thunderstorm",
+            96 or 99 => "wi wi-day-storm-showers",
+            _ => "wi wi-cloudy", // Fallback icon
+        };
+    }
+
+}

@@ -1,0 +1,275 @@
+﻿@using Microsoft.IdentityModel.Tokens
+@using Rise.Domain.Bookings
+@using Rise.Shared.Batteries
+@using Rise.Shared.Boats
+@using Rise.Shared.Users
+@inject IBookingService BookingService
+@inject IUserService UserService
+@inject IBoatService BoatService
+@inject IBatteryService BatteryService
+@inject ISnackbar Snackbar
+@attribute [Authorize(Roles = "Administrator")]
+
+<MudDialog>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3"/>
+            </div>
+        }
+        else if (booking is null)
+        {
+            <MudText Typo="Typo.body1" class="text-center">Geen boeking gevonden</MudText>
+        }
+        else
+        {
+            <MudForm @ref="form" @bind-Value="editModel">
+                <MudGrid Class="p-4" Justify="Justify.FlexStart" AlignItems="Center" Gutter="3">
+
+                    <MudItem xs="12" Class="d-flex justify-between">
+                        <!-- Booking Information -->
+                        <MudPaper Elevation="2" Class="p-4 me-2" Style="flex: 1;">
+                            <MudText Typo="Typo.h6">
+                                <strong>Boeking</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Datum:</strong> @booking.RentalDateTime.ToString("dddd dd/MM/yyyy", new CultureInfo("nl-BE"))
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Uur:</strong> @booking.RentalDateTime.ToString("HH:mm")
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Status boeking:</strong> @(((BookingStatus)booking.Status).TranslateStatusToNL())
+                            </MudText>
+                        </MudPaper>
+
+                        <!-- User Information -->
+                        <MudPaper Elevation="2" Class="p-4 ms-2" Style="flex: 1;">
+                            <MudText Typo="Typo.h6">
+                                <strong>Gebruiker</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Gebruiker:</strong> @booking.User.Firstname @booking.User.Lastname
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Telefoonnummer:</strong> @booking.User.PhoneNumber
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+
+                    <!-- Boat Information -->
+                    @if (editModel.BoatId is not null || (!IsNotEditable && IsAdmin))
+                    {
+                        <MudItem xs="12" class="mt-2">
+                            <MudText Typo="Typo.h6">
+                                <strong>Boot</strong>
+                            </MudText>
+                            @if (IsNotEditable)
+                            {
+                                <!-- Display Boat as TextField if Not Editable -->
+
+                                <MudText Typo="Typo.body1">
+                                    <strong>Naam: </strong> @booking?.Boat?.Name
+                                </MudText>
+                            }
+                            else
+                            {
+                                <!-- Normal Dropdown -->
+                                <MudSelect T="int?" @bind-Value="@editModel.BoatId" Label="Boot" Variant="Variant.Outlined" Disabled="IsNotEditable">
+                                    <MudSelectItem Value="(int?)-1">Onbekend</MudSelectItem>
+                                    @foreach (var boat in boats!)
+                                    {
+                                        <MudSelectItem Value="(int?)boat.Id">@boat.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                        </MudItem>
+                    }
+
+                    <!-- Battery Information -->
+                    @if (editModel.BatteryId is not null || (!IsNotEditable && IsAdmin))
+                    {
+                        Console.WriteLine(editModel.BatteryId);
+                        <MudItem xs="12" class="mt-2">
+                            <MudText Typo="Typo.h6">
+                                <strong>Batterij</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Batterijstatus:</strong> @(batteryStatus?.TranslateStatusToNL())
+                            </MudText>
+                            @if (IsNotEditable)
+                            {
+                                <!-- Display Battery as TextField if Not Editable -->
+                                <MudText Typo="Typo.body1">
+                                    <strong>Batterij: </strong>@booking?.Battery?.Name
+                                </MudText>
+                            }
+                            else
+                            {
+                                <!-- Normal Dropdown -->
+                                <MudSelect T="int?" @bind-Value="@editModel.BatteryId" Label="Gebruik batterij" Variant="Variant.Outlined" SelectedValuesChanged="@BatteryChanged" Disabled="IsNotEditable">
+                                    <MudSelectItem Value="(int?)-1">Onbekend</MudSelectItem>
+                                    @foreach (var battery in batteries!)
+                                    {
+                                        <MudSelectItem Value="(int?)battery.Id">@battery.Name</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            }
+                            <MudText Typo="Typo.body1">
+                                <strong>Haal op bij:</strong> @batteryOwnerName
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Telefoonnummer:</strong> @userPhoneNumber
+                            </MudText>
+                        </MudItem>
+                    }
+
+                    @if (!editModel.Remark.IsNullOrEmpty() || !IsNotEditable)
+                    {
+                        <!-- Remark Section -->
+                        <MudItem xs="12" class="mt-2">
+                            <MudText Typo="Typo.h6">
+                                <strong>Opmerking</strong>
+                            </MudText>
+                            @if (IsNotEditable)
+                            {
+                                <!-- Alleen tekst tonen als niet bewerkbaar -->
+                                <MudText Typo="Typo.body1">@editModel.Remark</MudText>
+                            }
+                            else
+                            {
+                                <!-- Tekstveld als bewerkbaar -->
+                                <MudTextField
+                                    @bind-Value="@editModel.Remark"
+                                    MaxLength="200"
+                                    Label="Opmerking"
+                                    Variant="Variant.Outlined"
+                                    AutoGrow="true"
+                                    Clearable
+                                    Style="color:black"/>
+                            }
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                @if (!IsNotEditable)
+                {
+                    <div class="d-flex justify-end mt-3 mb-3">
+                        <MudButton Color="Color.Secondary" OnClick="@(() => MudDialog.Close(DialogResult.Cancel()))">Annuleren</MudButton>
+                        <MudButton Color="Color.Primary" OnClick="HandleValidSubmit" Variant="Variant.Filled">Opslaan</MudButton>
+                    </div>
+                }
+            </MudForm>
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] private MudDialogInstance MudDialog { get; set; }
+    [Parameter] public int BookingId { get; set; }
+    [Parameter] public bool IsNotEditable { get; set; }
+    [Parameter] public bool IsAdmin { get; set; }
+
+    private BookingDto.Detail? booking;
+    private BookingDto.Mutate? editModel;
+    private BatteryStatus? batteryStatus;
+    private string userPhoneNumber = "onbekend";
+    private string batteryOwnerName = "onbekend";
+
+    private IEnumerable<BoatDto.BoatIndex>? boats;
+    private IEnumerable<BatteryDto.BatteryDetail>? batteries;
+    private MudForm form;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        booking = await BookingService.GetBookingByIdAsync(BookingId);
+        LoadAdditionalDetails();
+
+        // Set IsNotEditable if the status is Canceled
+        if (booking?.Status == BookingStatus.Canceled)
+        {
+            IsNotEditable = true;
+        }
+
+        if (booking != null)
+        {
+            editModel = new BookingDto.Mutate
+            {
+                BoatId = booking.Boat?.Id,
+                RentalDateTime = booking.RentalDateTime,
+                BatteryId = booking.Battery?.Id,
+                UserId = booking!.User.Id,
+                Status = booking!.Status,
+                Remark = booking!.Remark
+            };
+        }
+
+        if (IsAdmin && !IsNotEditable)
+        {
+            boats = await BoatService.GetAllBoatsAsync();
+            batteries = await BatteryService.GetAllBatteriesWithDetailsAsync();
+        }
+
+
+        isLoading = false;
+    }
+
+    private  void LoadAdditionalDetails()
+    {
+        if (booking?.Battery != null)
+        {
+            var batteryDetails = booking?.Battery;
+            batteryStatus = batteryDetails?.Status;
+
+            if (batteryDetails?.User != null)
+            {
+                batteryOwnerName = $"{batteryDetails.User.Firstname} {batteryDetails.User.Lastname}" ?? "onbekend";
+                userPhoneNumber = batteryDetails.User.PhoneNumber ?? "onbekend";
+            }
+        }
+    }
+
+    private void BatteryChanged()
+    {
+        if (editModel!.BatteryId == -1)
+        {
+            batteryStatus = BatteryStatus.Available;
+            userPhoneNumber = "onbekend";
+            batteryOwnerName = "onbekend";
+            return;
+        }
+
+        var battery = batteries.First(b => b.Id == editModel.BatteryId);
+        batteryStatus = battery.Status;
+        userPhoneNumber = battery.User?.PhoneNumber ?? "onbekend";
+        batteryOwnerName = battery.User is null ? "onbekend" : $"{battery.User.Firstname} {battery.User.Lastname}";
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        if (editModel.BoatId == -1) editModel.BoatId = null;
+        if (editModel.BatteryId == -1) editModel.BatteryId = null;
+
+        var isSuccess = await BookingService.UpdateBookingAsync(BookingId, editModel!);
+        if (isSuccess)
+        {
+            Snackbar.Add("Boeking succesvol bewerkt", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(new { BookingId = BookingId, UpdatedInfo = boats.Where(b => b.Id == editModel.BoatId).FirstOrDefault() }));
+        }
+        else
+        {
+            Snackbar.Add("Er is iets fout gegaan bij het bewerken van de boeking", Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

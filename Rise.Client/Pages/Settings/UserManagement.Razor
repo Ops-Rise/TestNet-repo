@@ -1,0 +1,264 @@
+@page "/users"
+@attribute [Authorize(Roles = "Administrator")]
+@inject IUserService UserService
+@inject IDialogService DialogService
+@inject MudBlazor.ISnackbar Snackbar
+@using Rise.Shared.Users
+@using MudBlazor
+@using MudBlazor.Components
+
+<link href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" rel="stylesheet">
+<PageTitle>User Management</PageTitle>
+
+<div class="container mx-auto p-6" style="background-color:Color.Background; color:Color.TextPrimary;">
+
+    <MudPaper class="p-4 shadow-none" Style="background-color:Color.Surface; color:Color.TextPrimary;">
+
+        <MudItem class="text-center">
+
+            <MudText Typo="Typo.h5">Gebruikers</MudText>
+
+        </MudItem>
+
+        @if (isLoading)
+
+        {
+
+            <div class="d-flex justify-content-center">
+
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3"/>
+
+            </div>
+
+        }
+
+        else
+
+        {
+             <MudGrid Justify="Justify.FlexEnd" Style="display: flex; gap: 1rem; margin-bottom: 3px; height: 100px">
+                <MudItem xs="6" sm="6" md="4" lg="3" Style="max-width: 300px; width: 100%;">
+                    <MudTextField @bind-Value="SearchString" 
+                                Variant="Variant.Outlined" 
+                                Clearable="true"
+                                Placeholder="Search" 
+                                Adornment="Adornment.Start" 
+                                Margin="Margin.Dense"
+                                Immediate="true" 
+                                AdornmentIcon="@Icons.Material.Filled.Search" 
+                                IconSize="Size.Medium"
+                                Class="search-item" />
+                </MudItem>
+            </MudGrid>
+
+            <MudDataGrid T="UserDto.Index" 
+QuickFilter="@QuickFilter"
+                        Items="users" 
+
+                        Striped="true" 
+
+                        Hover="true" 
+
+                        Dense="true" 
+
+                        FixedHeader="true"
+
+                        Height="@_tableHeight">
+
+                <Columns>
+
+                    <PropertyColumn Property="x => x.Id" Title="Id" />
+
+                    <PropertyColumn Property="x => x.Email" Title="Email" />
+
+                    <PropertyColumn Property="x => x.Firstname" Title="Voornaam" />
+
+                    <PropertyColumn Property="x => x.Lastname" Title="Achternaam" />
+
+                    <PropertyColumn Property="x => x.Address.FullAddress" Title="Adres" />
+
+                    <PropertyColumn Property="x => x.PhoneNumber" Title="Telefoonnummer" />
+
+                    <TemplateColumn Title="Registratiestatus">
+
+                        <CellTemplate>
+
+                            <MudChip Color="@(context.Item.IsRegistrationComplete ? Color.Success : Color.Error)">
+
+                                @(context.Item.IsRegistrationComplete ? "Compleet" : "Onvolledig")
+
+                            </MudChip>
+
+                        </CellTemplate>
+
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Opleidingsstatus">
+
+                        <CellTemplate>
+
+                            <MudChip Color="@(context.Item.IsTrainingComplete ? Color.Success : Color.Error)"
+
+                                    OnClick="@(() => ConfirmTrainingStatusChange(context.Item))">
+
+                                @(context.Item.IsTrainingComplete ? "Voltooid" : "Niet voltooid")
+
+                            </MudChip>
+
+                        </CellTemplate>
+
+                    </TemplateColumn>
+
+                    <TemplateColumn Title="Acties">
+
+                        <CellTemplate>
+
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+
+                                         Color="Color.Primary"
+
+                                         OnClick="@(() => ConfirmDeleteUser(context.Item.Id))" />
+
+                        </CellTemplate>
+
+                    </TemplateColumn>
+
+                </Columns>
+
+                <PagerContent>
+
+                    <MudDataGridPager T="UserDto.Index" />
+
+                </PagerContent>
+
+            </MudDataGrid>
+
+        }
+
+    </MudPaper>
+
+</div>
+
+@code {
+    private IEnumerable<UserDto.Index> users;
+[Inject] private IJSRuntime JS { get; set; }
+
+private bool isLoading = true;
+
+private string _tableHeight = "400px";
+
+private string SearchString { get; set; }
+
+    private void ToggleTrainingStatus(UserDto.Index user)
+    {
+        user.IsTrainingComplete = !user.IsTrainingComplete;
+    }
+    private async Task ConfirmTrainingStatusChange(UserDto.Index user)
+    {
+        ToggleTrainingStatus(user);
+        bool? result = await DialogService.ShowMessageBox(
+            "Bevestig wijziging",
+            $"Weet je zeker dat je de opleidingsstatus van {user.FullName} wilt wijzigen?",
+            yesText: "Ja", cancelText: "Annuleer");
+
+        if (result == true)
+        {
+            await ApplyTrainingStatusChange(user);
+        }else{
+        ToggleTrainingStatus(user);
+
+        }
+    }
+    private async Task ApplyTrainingStatusChange(UserDto.Index user)
+    {
+        await UserService.UpdateUserTrainingStatusAsync(user.Id, user.IsTrainingComplete);
+
+        var updatedUser = users.FirstOrDefault(u => u.Id == user.Id);
+        if (updatedUser != null)
+        {
+            updatedUser.IsTrainingComplete = user.IsTrainingComplete;
+        }
+
+        Snackbar.Add("Opleidingsstatus gewijzigd!", Severity.Success);
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        users = await UserService.GetAllAsync();
+        isLoading = false;  
+        
+        var viewportHeight = await JS.InvokeAsync<int>("eval", "window.innerHeight");
+        var adjustedHeight = viewportHeight - 300; 
+       _tableHeight = $"{adjustedHeight}px";
+
+    }
+
+    private async Task UpdateTrainingStatus(int userId, bool isTrainingComplete)
+    {
+        await UserService.UpdateUserTrainingStatusAsync(userId, isTrainingComplete);
+    }
+
+    private async Task ApplyChanges(UserDto.Index user)
+    {
+        await UserService.UpdateUserTrainingStatusAsync(user.Id, user.IsTrainingComplete);
+
+        var updatedUser = users.FirstOrDefault(u => u.Id == user.Id);
+        if (updatedUser != null)
+        {
+            updatedUser.IsTrainingComplete = user.IsTrainingComplete;
+        }
+        Snackbar.Add("Wijzigingen succesvol!", Severity.Success);
+
+    }
+    private async Task ConfirmDeleteUser(int userId)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Verwijder bevestiging",
+            "Weet je zeker dat je deze gebruiker wilt verwijderen?",
+            yesText: "Verwijder", cancelText: "Annuleer");
+
+        if (result == true)
+        {
+            await DeleteUser(userId);
+        }
+    }
+
+    private async Task DeleteUser(int userId)
+    {
+        await UserService.DeleteAsync(userId);
+
+        users = users.Where(u => u.Id != userId).ToList();
+
+        Snackbar.Add("Gebruiker verwijderd!", Severity.Success);
+
+    }
+
+      private Func<UserDto.Index, bool> QuickFilter => x =>
+    {
+        if (string.IsNullOrWhiteSpace(SearchString))
+            return true;
+
+        if (x.Email?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+            return true;
+
+        if (x.Firstname?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+            return true;
+
+        if (x.Lastname?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+            return true;
+
+        if (x.PhoneNumber?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+            return true;
+
+        if (x.Address?.FullAddress?.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase) == true)
+            return true;
+
+        var registrationStatus = x.IsRegistrationComplete ? "Compleet" : "Onvolledig";
+        if (registrationStatus.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase))
+            return true;
+
+        var trainingStatus = x.IsTrainingComplete ? "Voltooid" : "Niet voltooid";
+        if (trainingStatus.Contains(SearchString, StringComparison.InvariantCultureIgnoreCase))
+            return true;
+
+        return false;
+    };
+}

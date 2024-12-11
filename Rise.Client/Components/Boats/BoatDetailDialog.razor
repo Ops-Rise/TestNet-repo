@@ -1,0 +1,112 @@
+﻿@using Rise.Shared.Boats
+@using Rise.Domain.Boats
+@inject IBoatService BoatService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3" />
+            </div>
+        }
+        else
+        {
+            <EditForm Model="editModel" OnValidSubmit="HandleValidSubmit">
+                <DataAnnotationsValidator />
+
+                <MudTextField @bind-Value="editModel.Name" Label="Naam" Class="mt-4" Placeholder="Vul de naam van de boot in" Required="true" RequiredError="Verplicht"/>
+
+                @if (IsEditMode)
+                {
+                    <MudSelect @bind-Value="editModel.Status" Label="Bootstatus" Class="mt-6">
+                        @foreach (var status in Enum.GetValues<BoatStatus>())
+                        {
+                            <MudSelectItem Value="@status">@status.TranslateStatusToNL()</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+                <div class="d-flex justify-end mt-3 mb-3">
+                    <MudButton Color="Color.Secondary" OnClick="@(() => MudDialogInstance.Close(DialogResult.Cancel()))" Variant="Variant.Text">
+                        Annuleren
+                    </MudButton>
+                    <MudButton Color="Color.Primary" ButtonType="ButtonType.Submit" Variant="Variant.Filled">
+                        @(IsEditMode ? "Opslaan" : "Maak aan")
+                    </MudButton>
+                </div>
+            </EditForm>
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance MudDialogInstance { get; set; }
+
+    [Parameter] public int? BoatId { get; set; }
+
+    // Default filler
+    private BoatDto.Mutate editModel = new() { Name = string.Empty, Status = BoatStatus.Available };
+    private bool isLoading = true;
+    private bool IsEditMode => BoatId.HasValue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IsEditMode)
+        {
+            var boat = await BoatService.GetBoatByIdAsync(BoatId.Value);
+            if (boat != null)
+            {
+                editModel = new BoatDto.Mutate
+                    {
+                        Name = boat.Name,
+                        Status = boat.Status,
+                    };
+            }
+        }
+        isLoading = false;
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        isLoading = true;
+
+        if (IsEditMode)
+        {
+            // Existing boat
+            var isSuccess = await BoatService.UpdateBoatStatusAsync(BoatId.Value, editModel);
+            if (isSuccess)
+            {
+                Snackbar.Add("Boot succesvol bijgewerkt.", Severity.Success);
+                MudDialogInstance.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Er is een fout opgetreden bij het bijwerken van de boot.", Severity.Error);
+            }
+        }
+        else
+        {
+            // New boat
+            var newBoat = new BoatDto.CreateBoatDto
+                {
+                    Name = editModel.Name,
+                    Status = BoatStatus.Available,
+                };
+
+            var boat = await BoatService.CreateNewBoatAsync(newBoat);
+            if (boat != null)
+            {
+                Snackbar.Add("Boot succesvol aangemaakt.", Severity.Success);
+                MudDialogInstance.Close(DialogResult.Ok(boat));
+            }
+            else
+            {
+                Snackbar.Add("Er is een fout opgetreden bij het aanmaken van de boot.", Severity.Error);
+            }
+        }
+
+        isLoading = false;
+    }
+}

@@ -1,0 +1,148 @@
+﻿@using Rise.Shared.Batteries
+@using Rise.Shared.Users
+@inject IBatteryService BatteryService
+@inject IUserService UserService
+@inject ISnackbar Snackbar
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "Administrator")]
+
+<MudDialog>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <MudItem class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3"/>
+            </MudItem>
+        }
+        else
+        {
+            <div>
+            <MudForm @ref="form" @bind-Value="editModel">
+                <MudTextField @bind-Value="editModel.Name" Label="Naam" Required="true" RequiredError="Verplicht" Class="mt-4"/>
+
+                @if (IsEditMode)
+                {
+                    <MudSelect @bind-Value="editModel.Status" Label="Batterijstatus" Required="true" RequiredError="Verplicht" Class="mt-6">
+                        @foreach (var status in Enum.GetValues<BatteryStatus>())
+                        {
+                            <MudSelectItem Value="@status">@status.TranslateStatusToNL()</MudSelectItem>
+                        }
+                    </MudSelect>
+                }
+
+                <MudSelect @bind-Value="user" Label="@(IsEditMode ? "Gebruiker die de batterij momenteel bezit" : "Gebruiker die de nieuwe batterij momenteel bezit")" Placeholder="Selecteer een gebruiker" Required="true" RequiredError="Verplicht" Class="mt-6" ToStringFunc="@converter">
+                    @foreach (var user in usersList)
+                    {
+                        <MudSelectItem Value="@user"/>
+                    }
+                </MudSelect>
+
+                <div class="d-flex justify-end mt-4">
+                    <MudButton Color="Color.Secondary" OnClick="@(() => MudDialogInstance.Close(DialogResult.Cancel()))" Variant="Variant.Text">Annuleren</MudButton>
+                    <MudButton OnClick="HandleValidSubmit" Variant="Variant.Filled" Color="Color.Primary" Class="ms-2">
+                        @(IsEditMode ? "Opslaan" : "Maak aan")
+                    </MudButton>
+                </div>
+            </MudForm>
+            </div>
+        }
+    </DialogContent>
+</MudDialog>
+
+@code {
+    [CascadingParameter] public MudDialogInstance MudDialogInstance { get; set; }
+
+    [Parameter] public int? batteryId { get; set; }
+
+    private bool isLoading = true;
+    private bool IsEditMode => batteryId.HasValue;
+    private UserDto.Index user;
+    private MudForm form;
+
+    // Default filler
+    private BatteryDto.Mutate editModel = new() { Name = string.Empty, Status = BatteryStatus.Available, UserId = 0 };
+    private BatteryDto.Create battery;
+    private IEnumerable<UserDto.Index> usersList;
+
+    Func<UserDto.Index, string> converter = user => $"{user.Firstname} {user.Lastname}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+
+        if (IsEditMode)
+        {
+            var batteryDetails = await BatteryService.GetBatteryWithDetailsByIdAsync(batteryId.Value);
+
+            if (batteryDetails != null)
+            {
+                editModel = new BatteryDto.Mutate
+                {
+                    Name = batteryDetails.Name,
+                    Status = batteryDetails.Status,
+                    UserId = batteryDetails.User.Id
+                };
+                user = batteryDetails.User;
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadUsers()
+    {
+        usersList = await UserService.GetVerifiedUsersAsync();
+        if (usersList == null)
+            usersList = new List<UserDto.Index>();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        if (IsEditMode)
+        {
+            // Editing battery
+            if (editModel != null)
+            {
+                editModel.UserId = user.Id;
+            }
+
+            var isSuccess = await BatteryService.UpdateBatteryAsync(batteryId.Value, editModel);
+            if (isSuccess)
+            {
+                MudDialogInstance.Close(DialogResult.Ok(true));
+                Snackbar.Add("Batterij succesvol bijgewerkt.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Er is iets fout gegaan bij het bijwerken van de batterij.", Severity.Error);
+            }
+        }
+        else
+        {
+            // Creating battery
+            battery = new BatteryDto.Create { Name = editModel.Name, UserId = user.Id };
+
+            isLoading = true;
+            int response = await BatteryService.CreateBatteryAsync(battery);
+            isLoading = false;
+
+            if (response == -1)
+            {
+                Snackbar.Add("Er is iets fout gegaan bij het aanmaken van de batterij.", Severity.Error);
+            }
+            else
+            {
+                Snackbar.Add("Batterij succesvol aangemaakt.", Severity.Success);
+                MudDialogInstance.Close(DialogResult.Ok(true));
+            }
+        }
+    }
+}

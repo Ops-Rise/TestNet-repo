@@ -1,0 +1,70 @@
+﻿@using MudBlazor
+@page "/becomeMember"
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudCard Class="pa-4">
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.h4" Align="Align.Center" Class="my-4">
+                    Word lid van VZW Buut
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    Om gebruik te maken van de deelbootjes moet voldaan worden aan een aantal voorwaarden:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem Text="Je woont in de wijkMuide - Meulestede - Afrikalaan."/>
+                    <MudListItem Text="Je bent minimum 18 jaar oud."/>
+                    <MudListItem Text="Je volgt de afspraken van de VZW Buut."/>
+                </MudList>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    VZW Buut is echter geen verhuurfirma, wel een platform van deelbootjes voor de wijk, gerund door vrijwilligers. Dit vraagt een bepaald engagement van de gebruiker.
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    Indien je voldoet aan de voorwaarden kan je via onderstaande link lid worden van VZW Buut.
+                </MudText>
+                <MudText>
+                    Na het invullen van het formulier krijg je een mail met een uitnodiging voor een opleidingsmoment. (<strong>Onze mails komen snel in de spam box terecht</strong>, hou dit in de gaten)
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    Het lidgeld bedraagt <strong>éénmalig 20 euro</strong>, de waarborg <strong>150 euro</strong>.
+                </MudText>
+                <MudText>
+                    Na het bijwonen van een opleidingsmoment heb je de kans om het lidgeld en waarborg over te schrijven of te betalen met Bank Contact (<strong>geen cash</strong>), daarna wordt je account geactiveerd.
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    Na activatie kan je een bootje reserveren, dit in vaarblokken van <strong>3 uur</strong>, voor een bedrag van <strong>30 euro</strong>.
+                </MudText>
+                <MudText>
+                    De persoon die reserveert moet aanwezig zijn in de boot. Er mogen maximum <strong>6 volwassenen</strong> aan boord, een volwassene telt voor <strong>2 kinderen jonger dan 12 jaar</strong>. Het maximum aantal aanwezigen per boot is <strong>8</strong>.
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12">
+                <MudText>
+                    De wettelijk verplichte attributen zijn aanwezig in de boot, zorg er zeker voor dat deze aan boord blijven.
+                </MudText>
+            </MudItem>
+
+            <MudItem xs="12" Class="d-flex justify-center mt-4">
+                <MudButton Href="authentication/login" Color="Color.Primary" Variant="Variant.Filled" Size="Size.Large">
+                    Schrijf je in
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudCard>
+</MudContainer>

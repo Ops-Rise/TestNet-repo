@@ -1,0 +1,12 @@
+﻿@page "/mail"
+@using MudBlazor
+@using Rise.Client.Components.Mail
+@using Rise.Shared.Mailer
+@attribute [Authorize(Roles = "Administrator")]
+
+<MailerComponent />
+
+
+@code {
+
+}

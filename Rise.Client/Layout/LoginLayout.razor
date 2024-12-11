@@ -1,0 +1,23 @@
+﻿@inherits LayoutComponentBase
+
+<div class="login-background">
+    <BaseLayout>
+        <MudMainContent>
+            <MudContainer MaxWidth="MaxWidth.False" Class="px-4">
+                @Body
+            </MudContainer>
+        </MudMainContent>
+    </BaseLayout>
+</div>
+
+<style>
+    .login-background {
+        height: 100vh;
+        background-image: url('images/swirling-water.jpg');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }
+
+</style>

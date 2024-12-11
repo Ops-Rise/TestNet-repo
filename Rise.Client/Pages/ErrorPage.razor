@@ -1,0 +1,24 @@
+@page "/error"
+@inject NavigationManager Navigation
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="4" Class="pa-4 text-center">
+        <MudText Typo="Typo.h4" Color="Color.Error" Class="mb-4">
+            Oeps! Er is iets misgegaan.
+        </MudText>
+        <MudText Typo="Typo.body1">
+            Onze excuses voor het ongemak. Het lijkt erop dat er een onverwachte fout is opgetreden.
+        </MudText>
+        <MudDivider Class="my-4" />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="GoHome">
+             Terug naar home
+        </MudButton>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private void GoHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

@@ -1,0 +1,102 @@
+﻿@page "/"
+
+<MudContainer MaxWidth="MaxWidth.False" Class="p-0 m-0">
+    <!-- Full-width image with overlay text -->
+    <MudPaper class="relative p-0 m-0 w-full h-screen bg-cover bg-center flex justify-center items-start pt-16"
+        style="background-image: url('images/home_crane.jpg');">
+        <!-- Logo and overlay text -->
+        <MudItem class="flex flex-col items-center text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-center">
+            <MudImage Src="/images/buut_logo_reverse.png" Class="mt-3" />
+            Deelbootjes voor <br />
+            Muide - Meulestede - Afrikalaan
+        </MudItem>
+    </MudPaper>
+
+    <!-- Text paragraph -->
+    <MudItem class="flex justify-center mt-8 mb-6">
+        <MudItem class="sm:w-4/5 md:w-3/5 text-base lg:text-lg sm:text-center">
+            <MudText class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-center mb-4">
+                DE BOTEN
+            </MudText>
+            <MudItem class="space-y-4 lg:space-y-7">
+                <MudText>
+                    Via het Wijkbudget van Stad Gent kocht VZW Buut drie bootjes aan (type Whaly 450 classic),
+                    aangedreven met een elektrische motor.
+                </MudText>
+                <MudText>
+                    Deze 3 bootjes, Lubeck, Limba en Leith werden vernoemd naar straten in de buurt
+                    Muide-Meulestede-Afrikalaan. Deze straten verwijzen naar havens. Er werd gekozen voor namen beginnend
+                    met de letter L, als eerbetoon aan de overleden buurtwerker Lucien De Ridder.
+                </MudText>
+                <MudText>
+                    De bootjes kunnen door wijkbewoners online gereserveerd worden.
+                </MudText>
+                <MudText>
+                    Meer uitleg vind je op de pagina <a href="/hoe-lid-worden" class="font-semibold hover:underline">HOE LID
+                        WORDEN.</a>
+                </MudText>
+                <MudText>
+                    Geniet van op het water van de rust en pracht van onze buurt, van aan de Meulestedebrug tot aan het
+                    Keizerspark. De bootjes hebben als vaste ligplaats de verlaagde kade in de Terneuzenlaan.
+                </MudText>
+            </MudItem>
+        </MudItem>
+    </MudItem>
+
+    <!-- Boat logos without background -->
+    <MudItem class="d-flex justify-center mt-8">
+        <MudItem class="flex flex-wrap justify-around lg:w-4/5">
+            <MudImage Src="/images/buut_limbax.png" Alt="boot limba"
+                class="mt-3 scale-50 md:scale-75 lg:scale-90 xl:scale-100" />
+            <MudImage Src="/images/buut_leithx.png" Alt="boot leith"
+                class="mt-3 scale-50 md:scale-75 lg:scale-90 xl:scale-100" />
+            <MudImage Src="/images/buut_lubeckx.png" Alt="boot lubeck"
+                class="mt-3 scale-50 md:scale-75 lg:scale-90 xl:scale-100" />
+        </MudItem>
+    </MudItem>
+
+    <!-- full-width image with overlay text -->
+    <MudPaper class="relative p-0 m-0 w-full h-screen bg-cover bg-center flex justify-center items-start"
+        style="background-image: url('images/home_dampoort.webp');">
+        <!-- Overlay text -->
+        <MudItem class="flex flex-col items-center text-white text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-center  pt-16">
+            Virtuele rondvaart
+        </MudItem>
+        <MudButton class="absolute top-[35%] left-1/2 transform -translate-x-1/2 -translate-y-1/2 py-2"
+            Href="https://www.youtube.com/watch?v=rB57N-dBw-U" Target="_blank" Variant="Variant.Filled"
+            Color="Color.Primary">Klik hier</MudButton>
+    </MudPaper>
+</MudContainer>
+
+<style>
+    .full-page-container {
+        width: 100vw;
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    .full-page-image-container {
+        width: 100vw;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .full-page-image {
+        width: 100vw;
+        height: 80vh;
+        object-fit: cover;
+    }
+
+    .login-button {
+        position: absolute;
+        top: 50%;
+        transform: translateY(333px);
+        z-index: 1;
+        width: 20%;
+        height: 8%;
+        min-width: 200px;
+        min-height: 60px;
+    }
+</style>

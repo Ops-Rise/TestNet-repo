@@ -1,0 +1,203 @@
+﻿@using MudBlazor
+@using Rise.Shared.Mailer
+@using Rise.Shared.Users
+@using Rise.Shared.Emails;
+@inject ISnackbar Snackbar
+@inject IUserService UserService
+@inject IEmailService EmailService
+@inject NavigationManager Navigation
+
+<MudCard Class="p-4">
+    <MudCardContent>
+        <MudForm @ref="form">
+            <MudGrid Class="mb-4" Justify="Justify.FlexStart" AlignItems="Center" Gutter="3">
+                <!-- Select Recipients -->
+                @if (FilteredUsers.Count() > 0)
+                {
+                    <MudItem xs="12" class="mt-2">
+                        <MudText Typo="Typo.h6"><strong>Ontvangers</strong></MudText>
+                        <MudSelect T="string" @bind-Values="SelectedRecipients" Label="Selecteer ontvangers" Required="true" RequiredError="Verplicht"
+                        MultiSelection="true" Variant="Variant.Outlined" SelectedValuesChanged="OnSelectedValuesChanged"
+                        SelectedValues="@(isSelectAllChecked ? new HashSet<string> {  }.Concat(SelectedRecipients) : SelectedRecipients)">
+                            <MudSelectItem T="string" Value="@_selectAll">Selecteer alles</MudSelectItem>
+                            @foreach (var user in FilteredUsers)
+                            {
+                                @if (user.Email != null)
+                                {
+                                    <MudSelectItem T="string" Value="@user.Email" Disabled="@isSelectAllChecked">
+                                        @($"{user.Firstname} {user.Lastname} - {user.Email}")
+                                    </MudSelectItem>
+                                }
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
+
+                <!-- Filters -->
+                <MudItem xs="12" class="mt-2">
+                    <MudText Typo="Typo.h6"><strong>Filters</strong></MudText>
+                    <MudSelect T="string" Value="@SelectedFilter" ValueChanged="@(async (string value) => { 
+                       SelectedFilter = value;
+                       await ApplyFilter(value);
+                   })" Label="Filter gebruikers" Variant="Variant.Outlined">
+                        <MudSelectItem T="string" Value="@("Geen Filter")">Geen Filter</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("NotRegistered")">Niet geregistreerd</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("Registered")">Geregistreerd</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("TrainingNotComplete")">Training te voltooien</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("TrainingComplete")">Training voltooid</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <!-- Subject -->
+                <MudItem xs="12" class="mt-2">
+                    <MudText Typo="Typo.h6"><strong>Onderwerp</strong></MudText>
+                    <MudTextField @bind-Value="editModel.Subject" Label="Onderwerp" Variant="Variant.Outlined"
+                    Required="true" RequiredError="Verplicht" />
+                </MudItem>
+
+                <!-- Message Body -->
+                <MudItem xs="12" class="mt-2">
+                    <MudText Typo="Typo.h6"><strong>Bericht</strong></MudText>
+                    <MudTextField @bind-Value="editModel.Body" Label="Bericht" Variant="Variant.Outlined" Required="true"
+                    RequiredError="Verplicht" Lines="9"/>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider />
+
+            <div class="d-flex justify-end mt-3 mb-3">
+                <MudButton Color="Color.Secondary" OnClick="ResetForm" Variant="Variant.Text">Reset</MudButton>
+                <MudButton Color="Color.Primary" OnClick="HandleSendEmail" Variant="Variant.Filled" Disabled="isLoading">
+                    @if (isLoading)
+                    {
+                        <MudText>Verzenden</MudText>
+                        <MudProgressCircular Class="ml-1" Size="Size.Small" Indeterminate="true" />
+                    }
+                    else
+                    {
+                        <MudText>Verzend</MudText>
+                    }
+
+                </MudButton>
+            </div>
+        </MudForm>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    private EmailDto.Mutate editModel = new();
+    private MudForm form;
+    private string SelectedFilter = "Geen Filter";
+    private HashSet<string> SelectedRecipients = new();
+    private List<UserDto.Index> FilteredUsers = new();
+    private const string _selectAll = "_selectAll";
+    private bool isSelectAllChecked = false;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private void OnSelectedValuesChanged(IEnumerable<string> values)
+    {
+        if (values.Contains(_selectAll))
+        {
+            isSelectAllChecked = true;
+            SelectedRecipients = new HashSet<string>(
+            FilteredUsers.Where(u => u.Email != null).Select(u => u.Email!)
+            );
+        }
+        else
+        {
+            isSelectAllChecked = false;
+            SelectedRecipients = new HashSet<string>(values.Where(v => v != _selectAll));
+        }
+        StateHasChanged();
+    }
+
+    private async Task LoadUsers()
+    {
+        FilteredUsers = (await UserService.GetAllAsync())
+        .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+        .ToList();
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task ApplyFilter(string filter)
+    {
+        SelectedRecipients.Clear();
+        isSelectAllChecked = false;
+
+        var users = (await UserService.GetAllAsync())
+        .Where(u => !string.IsNullOrWhiteSpace(u.Email))
+        .ToList();
+
+        FilteredUsers = filter switch
+        {
+            "Geen Filter" => users,
+            "NotRegistered" => users.Where(u => !u.IsRegistrationComplete).ToList(),
+            "Registered" => users.Where(u => u.IsRegistrationComplete).ToList(),
+            "TrainingNotComplete" => users.Where(u => u.IsRegistrationComplete && !u.IsTrainingComplete).ToList(),
+            "TrainingComplete" => users.Where(u => u.IsTrainingComplete).ToList(),
+            "All" => users,
+            _ => users,
+        };
+
+        StateHasChanged();
+    }
+
+    private async Task HandleSendEmail()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+              if (SelectedRecipients.Count == 1)
+            {
+                // Single recipient
+                await EmailService.SendEmailAsync(
+                    SelectedRecipients.First(),
+                    editModel.Subject,
+                    editModel.Body
+                );
+            }
+            else
+            {
+                // Multiple recipients
+                await EmailService.SendEmailAsync(
+                    SelectedRecipients.ToList(),
+                    editModel.Subject,
+                    editModel.Body
+                );
+            }
+
+ Snackbar.Add($"E-mail succesvol verzonden naar {SelectedRecipients.Count()} gebruikers.", Severity.Success);
+            ResetForm();
+
+            isLoading = false;
+            await LoadUsers();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Er is iets fout gegaan: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ResetForm()
+    {
+        editModel = new();
+        SelectedRecipients.Clear();
+        SelectedFilter = "Geen Filter";
+        isSelectAllChecked = false;
+
+        form.ResetValidation();
+    }
+}

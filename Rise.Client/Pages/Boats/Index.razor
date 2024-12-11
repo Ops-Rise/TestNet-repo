@@ -1,0 +1,153 @@
+﻿@page "/boats"
+@using Rise.Shared.Boats
+@using Rise.Domain.Boats
+@using Rise.Client.Services
+@using Rise.Client.Components.Boats;
+@inject NavigationManager Navigation
+@inject IBoatService BoatService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using DialogOptions = MudBlazor.DialogOptions
+@using MudBlazor
+@attribute [Authorize(Roles = "Administrator")]
+
+<link href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+<div class="container mx-auto p-6" style="background-color:Color.Background; color:Color.TextPrimary;">
+    <MudPaper class="p-4 shadow-none" Style="background-color:Color.Surface; color:Color.TextPrimary;">
+        <div class="d-flex justify-content-between">
+            <MudItem>
+                <MudText Typo="Typo.h5">Boten</MudText>
+            </MudItem>
+            <MudItem>
+                <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="CreateBoat"
+                           Class="mb-4">
+                    <MudIcon Icon="fas fa-plus" />
+                    <!-- only icon on xs screens-->
+                    <MudHidden Breakpoint="Breakpoint.Xs">
+                        <MudText Typo="Typo.body1" Class="ml-4">Boot aanmaken</MudText>
+                    </MudHidden>
+                </MudButton>
+            </MudItem>
+        </div>
+        @if (isLoading)
+        {
+            <div class="d-flex justify-content-center">
+                <MudProgressCircular Color="Color.Default" Indeterminate="true" class="mt-3" />
+            </div>
+        }
+        else if (boats == null)
+        {
+            <MudText Typo="Typo.body1">Geen boten gevonden.</MudText>
+        }
+        else
+        {
+            <MudDataGrid Items="@boats" Filterable="true" class="shadow-none">
+                <Columns>
+                    <PropertyColumn Property="b => b.Name" Title="Naam" />
+                    <PropertyColumn Property="b => (b.Status).TranslateStatusToNL()" Title="Status" />
+                    <TemplateColumn Title="Acties">
+                        <CellTemplate>
+                            <MudStack Row>
+                                <MudTooltip Text="Bewerken">
+                                    <MudIconButton Icon=@Icons.Material.Filled.EditNote Size="Size.Medium"
+                                                   Color="Color.Primary" @onclick="() => EditBoat(context.Item.Id)"
+                                                   Class="hover:bg-primary transition duration-300 ease-in-out" />
+                                </MudTooltip>
+                                <MudTooltip Text="Verwijderen">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Primary"
+                                                   @onclick="() => ConfirmDeleteBoat(context.Item)"
+                                                   class="hover:bg-primary transition duration-300 ease-in-out" />
+                                </MudTooltip>
+                            </MudStack>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+                <PagerContent>
+                    <MudDataGridPager PageSizeOptions="pageSizeOptions" RowsPerPageString="Boten per pagina:" />
+                </PagerContent>
+            </MudDataGrid>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    private List<BoatDto.BoatIndex>? boats;
+    private int[] pageSizeOptions = new int[] { 10, 25, 50 };
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBoats();
+        isLoading = false;
+    }
+
+    private async Task LoadBoats()
+    {
+        boats = (await BoatService.GetAllBoatsAsync()).ToList();
+    }
+
+    private async Task EditBoat(int boatId)
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+        DialogParameters parameters = new DialogParameters
+            {
+                ["boatId"] = boatId
+            };
+
+        var result = await DialogService.Show<BoatDetailDialog>("Boot bewerken", parameters, options).Result;
+
+        if (!result.Canceled)
+        {
+            await LoadBoats();
+        }
+    }
+
+    private async Task CreateBoat()
+    {
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true, CloseButton = true };
+
+        var result = await DialogService.Show<BoatDetailDialog>("Nieuwe boot", options).Result;
+
+        if (!result.Canceled)
+        {
+            boats.Add((BoatDto.BoatIndex)result.Data);
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmDeleteBoat(BoatDto.BoatIndex boat)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", "Boot verwijderen" },
+            { "Message", "Weet u zeker dat u deze boot wilt verwijderen? Let op: controleer zelf of er nog boekingen verbonden zijn aan deze boot. Deze moeten handmatig worden geannuleerd wanneer u de boot verwijdert." },
+            { "ConfirmText", "Verwijderen" },
+            { "CancelText", "Annuleren" },
+            { "ShowCancelButton", true }
+        };
+
+        var dialog = DialogService.Show<ConfirmationDialog>("Bevestiging", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteBoat(boat);
+        }
+    }
+
+    private async Task DeleteBoat(BoatDto.BoatIndex boat)
+    {
+        var result = await BoatService.DeleteBoatAsync(boat.Id);
+        if (result)
+        {
+            boats.Remove(boat);
+            Snackbar.Add("Boot succesvol verwijderd.", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Er is iets fout gegaan bij het verwijderen van de boot.", Severity.Error);
+        }
+    }
+}
