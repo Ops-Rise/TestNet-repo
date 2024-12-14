@@ -8,7 +8,7 @@
   </PropertyGroup>
 
     <PropertyGroup>
-    <EnableDefaultContentItems>true</EnableDefaultContentItems>
+    <EnableDefaultContentItems>false</EnableDefaultContentItems>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'https' " />
@@ -52,6 +52,9 @@
 
 <ItemGroup>
     <Content Include="Templates\**\*.html;wwwroot\**">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="appsettings.json">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
 </ItemGroup>
