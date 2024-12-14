@@ -16,6 +16,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 git branch: 'main',
+                    credentialsId: 'deploy',
                     url: 'git@github.com:RommensArne/TestNet-repo.git'
             }
         }
@@ -36,18 +37,33 @@ pipeline {
                 sh 'dotnet ef database update --startup-project Rise.Server --project Rise.Persistence'
             }
         }
-        stage('Publish Rise.server') {
+        stage('Publish Application') {
             steps {
                 echo 'Publishing the application...'
                 sh 'dotnet publish Rise.Server/Rise.Server.csproj -c Release -o ./publish/server'
                 sh 'dotnet publish Rise.Client/Rise.Client.csproj -c Release -o ./publish/client'
-                } 
-            
             }
+        }    
+        stage('Deploy to AppServer') {
+            steps {
+                echo 'Preparing and copying files to AppServer...'
+                withCredentials([sshUserPrivateKey(credentialsId: 'appserver', keyFileVariable: 'SSH_KEY')]) {
+                    sh """
+                        ssh -i $SSH_KEY -o StrictHostKeyChecking=no vagrant@172.24.128.6 '
+                            sudo mkdir -p /home/server /home/client &&
+                            sudo chown -R vagrant:vagrant /home/server /home/client &&
+                            sudo chmod -R 755 /home/server /home/client
+                        '
+                        scp -i $SSH_KEY -o StrictHostKeyChecking=no -r ./publish/server/* vagrant@172.24.128.6:/home/server/
+                        scp -i $SSH_KEY -o StrictHostKeyChecking=no -r ./publish/client/* vagrant@172.24.128.6:/home/client/
+                    """
+                }
+            }
+        }
     }
     post {
         success {
-            echo 'Pipeline completed successfully! Database created successfully!'
+            echo 'Pipeline completed successfully! Database created successfully and application published!'
         }
         failure {
             echo 'Pipeline execution failed. Database creation failed.'
